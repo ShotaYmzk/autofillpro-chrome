@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AutoFillPro - 設定</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar__brand">
+        <div class="sidebar__logo">A</div>
+        <div>
+          <div class="sidebar__name">AutoFillPro</div>
+          <div class="sidebar__sub">就活マイページ自動入力</div>
+        </div>
+      </div>
+
+      <div class="sidebar__profiles">
+        <div class="sidebar__section-label">プロフィール</div>
+        <div id="profileList" class="profile-list"></div>
+        <button id="addProfileBtn" class="btn btn--ghost btn--sm btn--full mt-8">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          プロフィール追加
+        </button>
+      </div>
+
+      <nav class="sidebar__nav">
+        <div class="sidebar__section-label">設定タブ</div>
+        <a class="nav-item active" data-tab="basic" href="#">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          基本情報
+        </a>
+        <a class="nav-item" data-tab="contact" href="#">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.01 1.18 2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+          連絡先・住所
+        </a>
+        <a class="nav-item" data-tab="education" href="#">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+          学歴
+        </a>
+        <a class="nav-item" data-tab="settings" href="#">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          詳細設定
+        </a>
+      </nav>
+
+      <div class="sidebar__footer">
+        <button id="exportBtn" class="btn btn--ghost btn--sm">エクスポート</button>
+        <button id="importBtn" class="btn btn--ghost btn--sm">インポート</button>
+        <input type="file" id="importFile" accept=".json" style="display:none" />
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main">
+      <div class="main__header">
+        <div>
+          <h1 id="profileNameTitle" class="main__title">プロフィール設定</h1>
+          <p class="main__subtitle">情報を入力して保存してください</p>
+        </div>
+        <div class="main__actions">
+          <button id="deleteProfileBtn" class="btn btn--danger btn--sm" style="display:none">削除</button>
+          <button id="saveBtn" class="btn btn--primary">保存する</button>
+        </div>
+      </div>
+
+      <div id="toast" class="toast" role="alert"></div>
+
+      <!-- Tab: 基本情報 -->
+      <section id="tab-basic" class="tab-panel active">
+        <div class="card">
+          <div class="card__header">氏名</div>
+          <div class="form-grid form-grid--2">
+            <div class="form-group">
+              <label class="form-label">姓 <span class="required">*</span></label>
+              <input type="text" id="lastName" class="form-input" placeholder="例：山田" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">名 <span class="required">*</span></label>
+              <input type="text" id="firstName" class="form-input" placeholder="例：太郎" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">セイ（フリガナ）</label>
+              <input type="text" id="lastKana" class="form-input" placeholder="例：ヤマダ" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">メイ（フリガナ）</label>
+              <input type="text" id="firstKana" class="form-input" placeholder="例：タロウ" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">ローマ字（姓）</label>
+              <input type="text" id="romajiLast" class="form-input" placeholder="例：Yamada" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">ローマ字（名）</label>
+              <input type="text" id="romajiFirst" class="form-input" placeholder="例：Taro" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__header">基本情報</div>
+          <div class="form-grid form-grid--1">
+            <div class="form-group">
+              <label class="form-label">性別</label>
+              <select id="gender" class="form-select">
+                <option value="">選択してください</option>
+                <option value="男性">男性</option>
+                <option value="女性">女性</option>
+                <option value="その他">その他</option>
+                <option value="回答しない">回答しない</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">生年月日</label>
+              <div class="dob-row" role="group" aria-label="生年月日">
+                <select id="dobYear" class="form-select dob-row__select" aria-label="年"></select>
+                <select id="dobMonth" class="form-select dob-row__select" aria-label="月"></select>
+                <select id="dobDay" class="form-select dob-row__select" aria-label="日"></select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__header">プロフィール名</div>
+          <div class="form-group">
+            <label class="form-label">このプロフィールの名前</label>
+            <input type="text" id="profileName" class="form-input" placeholder="例：メイン・企業A用…" />
+            <p class="form-hint">複数プロフィールを使い分ける際の識別名です</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab: 連絡先・住所 -->
+      <section id="tab-contact" class="tab-panel">
+        <div class="card">
+          <div class="card__header">連絡先</div>
+          <div class="form-grid form-grid--1">
+            <div class="form-group">
+              <label class="form-label">メールアドレス（メイン）</label>
+              <input type="email" id="email" class="form-input" placeholder="例：taro.yamada@example.com" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">サブメールアドレス ①（Axol のメールアドレス2など）</label>
+              <input type="email" id="emailSub1" class="form-input" placeholder="（任意）大学メールなど" />
+            </div>
+          </div>
+          <div class="form-group mt-16">
+            <label class="form-label">電話番号（携帯）</label>
+            <div class="phone-group">
+              <input type="text" id="mobile1" class="form-input" placeholder="080" maxlength="4" />
+              <span class="phone-sep">-</span>
+              <input type="text" id="mobile2" class="form-input" placeholder="1234" maxlength="4" />
+              <span class="phone-sep">-</span>
+              <input type="text" id="mobile3" class="form-input" placeholder="5678" maxlength="4" />
+            </div>
+          </div>
+          <div class="form-group mt-16">
+            <label class="form-label">電話番号（自宅）</label>
+            <div class="phone-group">
+              <input type="text" id="homePhone1" class="form-input" placeholder="048" maxlength="4" />
+              <span class="phone-sep">-</span>
+              <input type="text" id="homePhone2" class="form-input" placeholder="123" maxlength="4" />
+              <span class="phone-sep">-</span>
+              <input type="text" id="homePhone3" class="form-input" placeholder="4567" maxlength="4" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__header">
+            現住所
+            <span class="badge">在学中・連絡先</span>
+          </div>
+          <div class="form-grid form-grid--2">
+            <div class="form-group">
+              <label class="form-label">郵便番号</label>
+              <div class="zip-group">
+                <input type="text" id="zip1" class="form-input" placeholder="100" maxlength="3" />
+                <span class="phone-sep">-</span>
+                <input type="text" id="zip2" class="form-input" placeholder="0001" maxlength="4" />
+                <button id="lookupZipBtn" class="btn btn--ghost btn--sm">住所を検索</button>
+              </div>
+            </div>
+            <div class="form-group"></div>
+            <div class="form-group">
+              <label class="form-label">都道府県</label>
+              <select id="prefecture" class="form-select">
+                <option value="">選択</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">市区町村</label>
+              <input type="text" id="city" class="form-input" placeholder="例：千代田区千代田" />
+            </div>
+            <div class="form-group form-grid--span2">
+              <label class="form-label">番地</label>
+              <input type="text" id="address" class="form-input" placeholder="例：1-1-1" />
+            </div>
+            <div class="form-group form-grid--span2">
+              <label class="form-label">建物名・部屋番号</label>
+              <input type="text" id="building" class="form-input" placeholder="例：○○マンション 101号室" />
+            </div>
+            <div class="form-group form-grid--span2">
+              <label class="form-checkbox">
+                <input type="checkbox" id="vacationSameAsCurrent" />
+                <span>休暇中の連絡先は現住所と同じ（フォームにチェックを入れる）</span>
+              </label>
+              <p class="form-hint">チェック時は「現住所」と同じ連絡先を休暇中用にも使う場合に利用します</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__header">
+            帰省先住所
+            <span class="badge badge--secondary">実家・帰省先</span>
+          </div>
+          <div class="form-grid form-grid--2">
+            <div class="form-group">
+              <label class="form-label">郵便番号</label>
+              <div class="zip-group">
+                <input type="text" id="homeZip1" class="form-input" placeholder="000" maxlength="3" />
+                <span class="phone-sep">-</span>
+                <input type="text" id="homeZip2" class="form-input" placeholder="0000" maxlength="4" />
+                <button id="lookupHomeZipBtn" class="btn btn--ghost btn--sm">住所を検索</button>
+              </div>
+            </div>
+            <div class="form-group"></div>
+            <div class="form-group">
+              <label class="form-label">都道府県</label>
+              <select id="homePrefecture" class="form-select">
+                <option value="">選択</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">市区町村</label>
+              <input type="text" id="homeCity" class="form-input" placeholder="例：大阪市北区" />
+            </div>
+            <div class="form-group form-grid--span2">
+              <label class="form-label">番地</label>
+              <input type="text" id="homeAddress" class="form-input" placeholder="例：1-2-3" />
+            </div>
+            <div class="form-group form-grid--span2">
+              <label class="form-label">建物名・部屋番号</label>
+              <input type="text" id="homeBuilding" class="form-input" placeholder="例：建物名・号室" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab: 学歴 -->
+      <section id="tab-education" class="tab-panel">
+        <div class="card">
+          <div class="card__header">最終学歴</div>
+          <div class="form-grid form-grid--2">
+            <div class="form-group">
+              <label class="form-label">学校区分</label>
+              <select id="schoolType" class="form-select">
+                <option value="">選択してください</option>
+                <option value="大学院（修士）">大学院（修士）</option>
+                <option value="大学院（博士）">大学院（博士）</option>
+                <option value="大学">大学</option>
+                <option value="短期大学">短期大学</option>
+                <option value="専門学校">専門学校</option>
+                <option value="高等専門学校">高等専門学校</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">設置区分</label>
+              <select id="schoolSetup" class="form-select">
+                <option value="">選択してください</option>
+                <option value="国立">国立</option>
+                <option value="公立">公立</option>
+                <option value="私立">私立</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">学位（大学院のみ）</label>
+              <select id="degree" class="form-select">
+                <option value="">（学校区分から自動でも可）</option>
+                <option value="修士">修士</option>
+                <option value="博士">博士</option>
+              </select>
+              <p class="form-hint">Axol の「学位」ラジオボタンなどに反映されます</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__header">大学院情報 <span class="card__note">（大学院に進学している場合）</span></div>
+          <div class="form-grid form-grid--2">
+            <div class="form-group">
+              <label class="form-label">大学院名</label>
+              <input type="text" id="gradSchoolName" class="form-input" placeholder="例：○○大学大学院" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">大学院名ふりがな</label>
+              <input type="text" id="gradSchoolKana" class="form-input" placeholder="例：マルマルダイガクダイガクイン" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">大学院所在地（都道府県）</label>
+              <select id="gradSchoolPref" class="form-select"><option value="">選択</option></select>
+            </div>
+            <div class="form-group"></div>
+            <div class="form-group">
+              <label class="form-label">研究科名</label>
+              <input type="text" id="gradFaculty" class="form-input" placeholder="例：○○学研究科" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">専攻名</label>
+              <input type="text" id="gradDept" class="form-input" placeholder="例：○○専攻" />
+            </div>
+          </div>
+          <div class="form-grid form-grid--4 mt-16">
+            <div class="form-group">
+              <label class="form-label">入学（年）</label>
+              <select id="gradSchoolEnrollYear" class="form-select year-select"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">入学（月）</label>
+              <select id="gradSchoolEnrollMonth" class="form-select month-select"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">卒業予定（年）</label>
+              <select id="gradSchoolGradYear" class="form-select year-select"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">卒業予定（月）</label>
+              <select id="gradSchoolGradMonth" class="form-select month-select"></select>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__header">大学情報</div>
+          <div class="form-grid form-grid--2">
+            <div class="form-group">
+              <label class="form-label">大学名</label>
+              <input type="text" id="univName" class="form-input" placeholder="例：○○大学" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">大学名ふりがな</label>
+              <input type="text" id="univKana" class="form-input" placeholder="例：マルマルダイガク" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">大学所在地（都道府県）</label>
+              <select id="univPref" class="form-select"><option value="">選択</option></select>
+            </div>
+            <div class="form-group"></div>
+            <div class="form-group">
+              <label class="form-label">学部名</label>
+              <input type="text" id="faculty" class="form-input" placeholder="例：工学部" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">学科名</label>
+              <input type="text" id="dept" class="form-input" placeholder="例：○○学科" />
+            </div>
+          </div>
+          <div class="form-grid form-grid--4 mt-16">
+            <div class="form-group">
+              <label class="form-label">入学（年）</label>
+              <select id="enrollYear" class="form-select year-select"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">入学（月）</label>
+              <select id="enrollMonth" class="form-select month-select"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">卒業（年）</label>
+              <select id="gradYear" class="form-select year-select"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">卒業（月）</label>
+              <select id="gradMonth" class="form-select month-select"></select>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__header">卒業高校 <span class="card__note">（Axol 初回ログインなど）</span></div>
+          <p class="form-hint" style="margin-bottom:12px">
+            サイト側の「高校検索」ボタンは手動で押してください。ここでは都道府県・検索ワード・リストにない場合の学校名・入学／卒業年月を保存し、自動入力します。
+          </p>
+          <div class="form-grid form-grid--2">
+            <div class="form-group">
+              <label class="form-label">高校のある都道府県</label>
+              <select id="highSchoolPref" class="form-select"><option value="">選択</option></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">高校名の一部（検索ワード）</label>
+              <input type="text" id="highSchoolSearchWord" class="form-input" maxlength="40" placeholder="例：ニシチバ（カナの一部でも可）" />
+              <p class="form-hint">空欄のときは、下の卒業高校名の先頭から自動で入力します</p>
+            </div>
+            <div class="form-group form-grid--span2">
+              <label class="form-label">卒業高校の正式名称（リストにない学校など）</label>
+              <input type="text" id="highSchoolName" class="form-input" placeholder="例：○○県立○○高等学校" />
+            </div>
+          </div>
+          <div class="form-grid form-grid--1 mt-16">
+            <div class="form-group">
+              <label class="form-label">高校入学年月</label>
+              <div class="hs-ym-row" role="group" aria-label="高校入学年月">
+                <select id="highSchoolEnrollYear" class="form-select hs-ym-row__select" aria-label="年"></select>
+                <select id="highSchoolEnrollMonth" class="form-select hs-ym-row__select" aria-label="月"></select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">高校卒業年月</label>
+              <div class="hs-ym-row" role="group" aria-label="高校卒業年月">
+                <select id="highSchoolGradYear" class="form-select hs-ym-row__select" aria-label="年"></select>
+                <select id="highSchoolGradMonth" class="form-select hs-ym-row__select" aria-label="月"></select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__header">複雑フォーム向け（任意）</div>
+          <p class="form-hint" style="margin-bottom:16px">Axol の「学科系統」「学校検索の頭文字」などに使います。</p>
+          <div class="form-grid form-grid--2">
+            <div class="form-group form-grid--span2">
+              <label class="form-label">学科系統（Axol の一覧と同一）</label>
+              <select id="departmentSystem" class="form-select"></select>
+              <p class="form-hint">サイトのプルダウンと同じ選択肢です。コード（内部値）で保存され、そのまま自動入力されます。</p>
+            </div>
+            <div class="form-group">
+              <label class="form-label">学校名検索・頭文字（1文字）</label>
+              <input type="text" id="schoolSearchInitial" class="form-input" maxlength="2" placeholder="空欄でよい（大学／大学院の名前カナ先頭から自動）" />
+              <p class="form-hint">大学院なら「大学院名ふりがな」、それ以外なら「大学名ふりがな」を優先して先頭のカタカナを使います（サイトがずれるときだけ手入力）。</p>
+            </div>
+            <div class="form-group form-grid--span2">
+              <label class="form-label">ゼミ・研究室</label>
+              <input type="text" id="seminarLab" class="form-input" placeholder="研究室名など" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab: 詳細設定 -->
+      <section id="tab-settings" class="tab-panel">
+        <div class="card">
+          <div class="card__header">自動入力の動作</div>
+          <div class="settings-list">
+            <div class="settings-item">
+              <div class="settings-item__info">
+                <div class="settings-item__label">入力済みフィールドをハイライト</div>
+                <div class="settings-item__desc">自動入力後に入力されたフィールドを緑色で強調表示します</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="highlightFilled" />
+                <span class="toggle__slider"></span>
+              </label>
+            </div>
+            <div class="settings-item">
+              <div class="settings-item__info">
+                <div class="settings-item__label">入力前にプレビューを表示</div>
+                <div class="settings-item__desc">自動入力の前に、何をどこに入れるかを確認できるモーダルを表示します</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="previewBeforeFill" />
+                <span class="toggle__slider"></span>
+              </label>
+            </div>
+            <div class="settings-item">
+              <div class="settings-item__info">
+                <div class="settings-item__label">ページ内に「自動入力」ボタンを表示</div>
+                <div class="settings-item__desc">マイページ右下に緑のフローティングボタンを表示します（Axol など）</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="showFloatingButton" />
+                <span class="toggle__slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="form-group mt-16">
+            <label class="form-label">入力間隔（ミリ秒）</label>
+            <input type="number" id="fillDelay" class="form-input form-input--sm" min="0" max="500" step="10" />
+            <p class="form-hint">フィールド間の入力待機時間。フォームが正しく認識されない場合は増やしてください（推奨: 50ms）</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__header">データ管理</div>
+          <div class="data-actions">
+            <div class="data-action">
+              <div>
+                <div class="data-action__title">データをエクスポート</div>
+                <div class="data-action__desc">すべてのプロフィール設定をJSONファイルとして保存します</div>
+              </div>
+              <button id="exportBtn2" class="btn btn--secondary">エクスポート</button>
+            </div>
+            <div class="data-action">
+              <div>
+                <div class="data-action__title">データをインポート</div>
+                <div class="data-action__desc">以前にエクスポートしたJSONファイルからデータを復元します</div>
+              </div>
+              <button id="importBtn2" class="btn btn--secondary">インポート</button>
+            </div>
+            <div class="data-action data-action--danger">
+              <div>
+                <div class="data-action__title">すべてのデータを削除</div>
+                <div class="data-action__desc">保存されているすべてのプロフィールと設定を完全に削除します</div>
+              </div>
+              <button id="clearAllBtn" class="btn btn--danger">削除</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="../utils/storage.js"></script>
+  <script src="../utils/gakkei-self-options.js"></script>
+  <script src="../utils/furigana.js"></script>
+  <script src="../utils/postal.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

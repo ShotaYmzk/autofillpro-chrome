@@ -1,0 +1,60 @@
+{
+  "manifest_version": 3,
+  "name": "AutoFillPro - 就活マイページ自動入力",
+  "short_name": "AutoFillPro",
+  "version": "1.2.3",
+  "description": "就活マイページへの個人情報入力を1クリックで自動化。複数プロフィール・プレビュー確認・郵便番号補完に対応。",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png"
+    },
+    "default_title": "AutoFillPro"
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": [
+        "utils/storage.js",
+        "utils/furigana.js",
+        "utils/postal.js",
+        "content/field-matcher.js",
+        "content/overlay.js",
+        "content/site-adapters/generic.js",
+        "content/site-adapters/axol.js",
+        "content/site-adapters/iweb.js",
+        "content/autofill.js",
+        "content/float-button.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*.png"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
