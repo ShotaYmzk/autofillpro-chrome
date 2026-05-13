@@ -92,8 +92,26 @@ function formatDate(ts) {
 // ───────────────────────────────────────────
 // Fill / Preview
 // ───────────────────────────────────────────
+function showFillResult(response) {
+  if (!response?.success) {
+    showResult('入力できませんでした', true);
+    return;
+  }
+  if (response.previewPending) {
+    const n = response.previewCount;
+    showResult(
+      typeof n === 'number'
+        ? `プレビュー（${n} 件）を表示しました。画面上で確定すると入力されます`
+        : 'プレビューを表示しました。画面上で確定すると入力されます'
+    );
+    return;
+  }
+  showResult(`${response.filled ?? 0} 件のフィールドに入力しました`);
+}
+
 async function doFill() {
   const { profiles: latestProfiles } = await StorageUtil.getProfiles();
+  settings = await StorageUtil.getSettings();
   const id = document.getElementById('profileSelect').value;
   const profile = latestProfiles.find((p) => p.id === id) || latestProfiles[0];
   if (!profile) return;
@@ -109,11 +127,7 @@ async function doFill() {
       settings,
     });
 
-    if (response?.success) {
-      showResult(`${response.filled} 件のフィールドに入力しました`);
-    } else {
-      showResult('入力できませんでした', true);
-    }
+    showFillResult(response);
   } catch (err) {
     // Content script not injected yet — inject and retry
     try {
@@ -123,9 +137,7 @@ async function doFill() {
         profile,
         settings,
       });
-      if (response?.success) {
-        showResult(`${response.filled} 件のフィールドに入力しました`);
-      }
+      showFillResult(response);
     } catch (_) {
       showResult('このページでは入力できません', true);
     }
@@ -137,6 +149,7 @@ async function doFill() {
 
 async function doPreview() {
   const { profiles: latestProfiles } = await StorageUtil.getProfiles();
+  settings = await StorageUtil.getSettings();
   const id = document.getElementById('profileSelect').value;
   const profile = latestProfiles.find((p) => p.id === id) || latestProfiles[0];
   if (!profile) return;

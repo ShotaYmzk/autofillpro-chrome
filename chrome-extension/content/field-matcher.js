@@ -630,9 +630,18 @@ const FieldMatcher = (() => {
     const c = profile.contact || {};
     const e = profile.education || {};
 
+    const z =
+      typeof PostalUtil !== 'undefined' && PostalUtil.normalizeZipParts
+        ? PostalUtil.normalizeZipParts(c.zip1, c.zip2)
+        : { zip1: c.zip1 || '', zip2: c.zip2 || '' };
+    const hz =
+      typeof PostalUtil !== 'undefined' && PostalUtil.normalizeZipParts
+        ? PostalUtil.normalizeZipParts(c.homeZip1, c.homeZip2)
+        : { zip1: c.homeZip1 || '', zip2: c.homeZip2 || '' };
+    const zip = [z.zip1, z.zip2].filter(Boolean).join('-');
+
     const mobile = [c.mobile1, c.mobile2, c.mobile3].filter(Boolean).join('-');
     const homePhone = [c.homePhone1, c.homePhone2, c.homePhone3].filter(Boolean).join('-');
-    const zip = [c.zip1, c.zip2].filter(Boolean).join('-');
 
     const degree =
       (e.degree || '').trim() ||
@@ -661,7 +670,9 @@ const FieldMatcher = (() => {
       secondaryEmailConfirm: c.emailSub1 || '',
       mobile, mobile1: c.mobile1 || '', mobile2: c.mobile2 || '', mobile3: c.mobile3 || '',
       homePhone, homePhone1: c.homePhone1 || '', homePhone2: c.homePhone2 || '', homePhone3: c.homePhone3 || '',
-      zip, zip1: c.zip1 || '', zip2: c.zip2 || '',
+      zip, zip1: z.zip1, zip2: z.zip2,
+      homeZip1: hz.zip1,
+      homeZip2: hz.zip2,
       prefecture: c.prefecture || '',
       city: c.city || '',
       address: c.address || '',
@@ -691,6 +702,7 @@ const FieldMatcher = (() => {
       univPref: e.univPref || '',
       faculty: e.faculty || '',
       dept: e.dept || '',
+      declaredStream: (e.declaredStream || '').trim(),
       enrollYear: e.enrollYear || '',
       enrollMonth: e.enrollMonth || '',
       gradYear: e.gradYear || '',

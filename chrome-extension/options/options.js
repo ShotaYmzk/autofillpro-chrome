@@ -14,6 +14,19 @@ let currentProfileId = null;
 let profiles = [];
 let settings = {};
 
+/** フォームを閉じる／プロフィール切替で未保存が失われないよう検知 */
+let formDirty = false;
+let suppressDirty = false;
+
+function markDirty() {
+  if (suppressDirty) return;
+  formDirty = true;
+}
+
+function clearDirty() {
+  formDirty = false;
+}
+
 // ───────────────────────────────────────────
 // Initialisation
 // ───────────────────────────────────────────
@@ -149,6 +162,7 @@ async function loadData() {
   renderProfileList();
   loadProfile(currentProfileId);
   loadSettings();
+  clearDirty();
 }
 
 // ───────────────────────────────────────────
@@ -169,10 +183,17 @@ function renderProfileList() {
 }
 
 function switchProfile(id) {
+  if (formDirty && id !== currentProfileId) {
+    const ok = confirm(
+      '保存していない変更があります。ほかのプロフィールに切り替えると破棄されます。切り替えますか？'
+    );
+    if (!ok) return;
+  }
   currentProfileId = id;
   renderProfileList();
   loadProfile(id);
   StorageUtil.setActiveProfile(id);
+  clearDirty();
 }
 
 // ───────────────────────────────────────────
@@ -182,80 +203,86 @@ function loadProfile(id) {
   const profile = profiles.find((p) => p.id === id);
   if (!profile) return;
 
-  const b = profile.basic || {};
-  const c = profile.contact || {};
-  const e = profile.education || {};
+  suppressDirty = true;
+  try {
+    const b = profile.basic || {};
+    const c = profile.contact || {};
+    const e = profile.education || {};
 
-  setValue('profileName', profile.name);
-  setValue('lastName', b.lastName);
-  setValue('firstName', b.firstName);
-  setValue('lastKana', b.lastKana);
-  setValue('firstKana', b.firstKana);
-  setValue('romajiLast', b.romajiLast);
-  setValue('romajiFirst', b.romajiFirst);
-  setValue('gender', b.gender);
-  setValue('dobYear', b.dobYear);
-  setValue('dobMonth', b.dobMonth);
-  setValue('dobDay', b.dobDay);
+    setValue('profileName', profile.name);
+    setValue('lastName', b.lastName);
+    setValue('firstName', b.firstName);
+    setValue('lastKana', b.lastKana);
+    setValue('firstKana', b.firstKana);
+    setValue('romajiLast', b.romajiLast);
+    setValue('romajiFirst', b.romajiFirst);
+    setValue('gender', b.gender);
+    setValue('dobYear', b.dobYear);
+    setValue('dobMonth', b.dobMonth);
+    setValue('dobDay', b.dobDay);
 
-  setValue('email', c.email);
-  setValue('emailSub1', c.emailSub1);
-  setValue('mobile1', c.mobile1);
-  setValue('mobile2', c.mobile2);
-  setValue('mobile3', c.mobile3);
-  setValue('homePhone1', c.homePhone1);
-  setValue('homePhone2', c.homePhone2);
-  setValue('homePhone3', c.homePhone3);
-  setValue('zip1', c.zip1);
-  setValue('zip2', c.zip2);
-  setValue('prefecture', c.prefecture);
-  setValue('city', c.city);
-  setValue('address', c.address);
-  setValue('building', c.building);
-  setValue('homeZip1', c.homeZip1);
-  setValue('homeZip2', c.homeZip2);
-  setValue('homePrefecture', c.homePrefecture);
-  setValue('homeCity', c.homeCity);
-  setValue('homeAddress', c.homeAddress);
-  setValue('homeBuilding', c.homeBuilding);
+    setValue('email', c.email);
+    setValue('emailSub1', c.emailSub1);
+    setValue('mobile1', c.mobile1);
+    setValue('mobile2', c.mobile2);
+    setValue('mobile3', c.mobile3);
+    setValue('homePhone1', c.homePhone1);
+    setValue('homePhone2', c.homePhone2);
+    setValue('homePhone3', c.homePhone3);
+    setValue('zip1', c.zip1);
+    setValue('zip2', c.zip2);
+    setValue('prefecture', c.prefecture);
+    setValue('city', c.city);
+    setValue('address', c.address);
+    setValue('building', c.building);
+    setValue('homeZip1', c.homeZip1);
+    setValue('homeZip2', c.homeZip2);
+    setValue('homePrefecture', c.homePrefecture);
+    setValue('homeCity', c.homeCity);
+    setValue('homeAddress', c.homeAddress);
+    setValue('homeBuilding', c.homeBuilding);
 
-  setChecked('vacationSameAsCurrent', !!c.vacationSameAsCurrent);
+    setChecked('vacationSameAsCurrent', !!c.vacationSameAsCurrent);
 
-  setValue('schoolType', e.schoolType);
-  setValue('schoolSetup', e.schoolSetup);
-  setValue('degree', e.degree || '');
-  setValue('gradSchoolName', e.gradSchoolName);
-  setValue('gradSchoolKana', e.gradSchoolKana);
-  setValue('gradSchoolPref', e.gradSchoolPref);
-  setValue('gradFaculty', e.gradFaculty);
-  setValue('gradDept', e.gradDept);
-  setValue('gradSchoolEnrollYear', e.gradSchoolEnrollYear);
-  setValue('gradSchoolEnrollMonth', e.gradSchoolEnrollMonth);
-  setValue('gradSchoolGradYear', e.gradSchoolGradYear);
-  setValue('gradSchoolGradMonth', e.gradSchoolGradMonth);
-  setValue('univName', e.univName);
-  setValue('univKana', e.univKana);
-  setValue('univPref', e.univPref);
-  setValue('faculty', e.faculty);
-  setValue('dept', e.dept);
-  setValue('enrollYear', e.enrollYear);
-  setValue('enrollMonth', e.enrollMonth);
-  setValue('gradYear', e.gradYear);
-  setValue('gradMonth', e.gradMonth);
+    setValue('schoolType', e.schoolType);
+    setValue('schoolSetup', e.schoolSetup);
+    setValue('degree', e.degree || '');
+    setValue('gradSchoolName', e.gradSchoolName);
+    setValue('gradSchoolKana', e.gradSchoolKana);
+    setValue('gradSchoolPref', e.gradSchoolPref);
+    setValue('gradFaculty', e.gradFaculty);
+    setValue('gradDept', e.gradDept);
+    setValue('gradSchoolEnrollYear', e.gradSchoolEnrollYear);
+    setValue('gradSchoolEnrollMonth', e.gradSchoolEnrollMonth);
+    setValue('gradSchoolGradYear', e.gradSchoolGradYear);
+    setValue('gradSchoolGradMonth', e.gradSchoolGradMonth);
+    setValue('univName', e.univName);
+    setValue('univKana', e.univKana);
+    setValue('univPref', e.univPref);
+    setValue('faculty', e.faculty);
+    setValue('dept', e.dept);
+    setValue('declaredStream', e.declaredStream || '');
+    setValue('enrollYear', e.enrollYear);
+    setValue('enrollMonth', e.enrollMonth);
+    setValue('gradYear', e.gradYear);
+    setValue('gradMonth', e.gradMonth);
 
-  syncDepartmentSystemFromProfile(e.departmentSystem);
-  setValue('schoolSearchInitial', e.schoolSearchInitial);
-  setValue('seminarLab', e.seminarLab);
-  setValue('highSchoolPref', e.highSchoolPref);
-  setValue('highSchoolSearchWord', e.highSchoolSearchWord || '');
-  setValue('highSchoolName', e.highSchoolName);
-  setValue('highSchoolEnrollYear', e.highSchoolEnrollYear || '');
-  setValue('highSchoolEnrollMonth', e.highSchoolEnrollMonth || '');
-  setValue('highSchoolGradYear', e.highSchoolGradYear || '');
-  setValue('highSchoolGradMonth', e.highSchoolGradMonth || '');
+    syncDepartmentSystemFromProfile(e.departmentSystem);
+    setValue('schoolSearchInitial', e.schoolSearchInitial);
+    setValue('seminarLab', e.seminarLab);
+    setValue('highSchoolPref', e.highSchoolPref);
+    setValue('highSchoolSearchWord', e.highSchoolSearchWord || '');
+    setValue('highSchoolName', e.highSchoolName);
+    setValue('highSchoolEnrollYear', e.highSchoolEnrollYear || '');
+    setValue('highSchoolEnrollMonth', e.highSchoolEnrollMonth || '');
+    setValue('highSchoolGradYear', e.highSchoolGradYear || '');
+    setValue('highSchoolGradMonth', e.highSchoolGradMonth || '');
 
-  document.getElementById('profileNameTitle').textContent = profile.name || 'プロフィール設定';
-  document.getElementById('deleteProfileBtn').style.display = profiles.length > 1 ? '' : 'none';
+    document.getElementById('profileNameTitle').textContent = profile.name || 'プロフィール設定';
+    document.getElementById('deleteProfileBtn').style.display = profiles.length > 1 ? '' : 'none';
+  } finally {
+    suppressDirty = false;
+  }
 }
 
 function collectProfile() {
@@ -276,8 +303,8 @@ function collectProfile() {
     dobDay: getValue('dobDay'),
   };
   profile.contact = {
-    email: getValue('email'),
-    emailSub1: getValue('emailSub1'),
+    email: getValue('email').trim(),
+    emailSub1: getValue('emailSub1').trim(),
     emailSub2: '',
     mobile1: getValue('mobile1'),
     mobile2: getValue('mobile2'),
@@ -285,14 +312,26 @@ function collectProfile() {
     homePhone1: getValue('homePhone1'),
     homePhone2: getValue('homePhone2'),
     homePhone3: getValue('homePhone3'),
-    zip1: getValue('zip1'),
-    zip2: getValue('zip2'),
+    ...(() => {
+      const zm =
+        typeof PostalUtil !== 'undefined' && PostalUtil.normalizeZipParts
+          ? PostalUtil.normalizeZipParts(getValue('zip1'), getValue('zip2'))
+          : { zip1: getValue('zip1'), zip2: getValue('zip2') };
+      const zh =
+        typeof PostalUtil !== 'undefined' && PostalUtil.normalizeZipParts
+          ? PostalUtil.normalizeZipParts(getValue('homeZip1'), getValue('homeZip2'))
+          : { zip1: getValue('homeZip1'), zip2: getValue('homeZip2') };
+      return {
+        zip1: zm.zip1,
+        zip2: zm.zip2,
+        homeZip1: zh.zip1,
+        homeZip2: zh.zip2,
+      };
+    })(),
     prefecture: getValue('prefecture'),
     city: getValue('city'),
     address: getValue('address'),
     building: getValue('building'),
-    homeZip1: getValue('homeZip1'),
-    homeZip2: getValue('homeZip2'),
     homePrefecture: getValue('homePrefecture'),
     homeCity: getValue('homeCity'),
     homeAddress: getValue('homeAddress'),
@@ -317,6 +356,7 @@ function collectProfile() {
     univPref: getValue('univPref'),
     faculty: getValue('faculty'),
     dept: getValue('dept'),
+    declaredStream: getValue('declaredStream'),
     enrollYear: getValue('enrollYear'),
     enrollMonth: getValue('enrollMonth'),
     gradYear: getValue('gradYear'),
@@ -361,6 +401,17 @@ function collectSettings() {
 // Events
 // ───────────────────────────────────────────
 function bindEvents() {
+  const mainEl = document.querySelector('.main');
+  if (mainEl) {
+    mainEl.addEventListener('input', markDirty);
+    mainEl.addEventListener('change', markDirty);
+  }
+  window.addEventListener('beforeunload', (e) => {
+    if (!formDirty) return;
+    e.preventDefault();
+    e.returnValue = '';
+  });
+
   // Tab navigation
   document.querySelectorAll('.nav-item').forEach((link) => {
     link.addEventListener('click', (e) => {
@@ -376,14 +427,56 @@ function bindEvents() {
   // Save
   document.getElementById('saveBtn').addEventListener('click', async () => {
     const profile = collectProfile();
-    const idx = profiles.findIndex((p) => p.id === profile.id);
-    if (idx >= 0) profiles[idx] = profile; else profiles.push(profile);
-    settings = collectSettings();
+    try {
+      const clonedProfiles = JSON.parse(JSON.stringify(profiles));
+      const idx = clonedProfiles.findIndex((p) => p.id === profile.id);
+      const plain = JSON.parse(JSON.stringify(profile));
+      if (idx >= 0) clonedProfiles[idx] = plain;
+      else clonedProfiles.push(plain);
 
-    await StorageUtil.set({ profiles, activeProfileId: currentProfileId, settings });
-    renderProfileList();
-    document.getElementById('profileNameTitle').textContent = profile.name;
-    showToast('保存しました', 'success');
+      settings = collectSettings();
+
+      await StorageUtil.set({
+        profiles: clonedProfiles,
+        activeProfileId: currentProfileId,
+        settings: { ...settings },
+      });
+
+      profiles = clonedProfiles;
+
+      const { profiles: reread } = await StorageUtil.getProfiles();
+      const saved = reread.find((p) => p.id === plain.id);
+      const emailMatch =
+        String(saved?.contact?.email ?? '').trim() === String(plain.contact?.email ?? '').trim();
+      const subMatch =
+        String(saved?.contact?.emailSub1 ?? '').trim() ===
+        String(plain.contact?.emailSub1 ?? '').trim();
+
+      if (!saved || !emailMatch || !subMatch) {
+        console.error('[AutoFillPro] Save verification failed', {
+          expected: plain.contact,
+          stored: saved?.contact,
+        });
+        showToast(
+          '保存の確認でメールが一致しませんでした。別の AutoFillPro が有効になっていないか確認してください。',
+          'error'
+        );
+        return;
+      }
+
+      clearDirty();
+      const pcSave = plain.contact || {};
+      setValue('zip1', pcSave.zip1 ?? '');
+      setValue('zip2', pcSave.zip2 ?? '');
+      setValue('homeZip1', pcSave.homeZip1 ?? '');
+      setValue('homeZip2', pcSave.homeZip2 ?? '');
+      renderProfileList();
+      document.getElementById('profileNameTitle').textContent = plain.name;
+      showToast('保存しました', 'success');
+    } catch (e) {
+      console.error('[AutoFillPro] Save failed', e);
+      showToast(`保存に失敗しました: ${e.message || String(e)}`, 'error');
+    }
   });
 
   // Add profile
@@ -463,8 +556,15 @@ function bindEvents() {
 // Postal code lookup
 // ───────────────────────────────────────────
 async function lookupZip(zip1Id, zip2Id, prefId, cityId, addrId) {
-  const zip = getValue(zip1Id) + getValue(zip2Id);
-  const result = await PostalUtil.lookup(zip);
+  const parts = PostalUtil.normalizeZipParts(getValue(zip1Id), getValue(zip2Id));
+  const code = parts.zip1 + parts.zip2;
+  if (code.length !== 7) {
+    showToast('郵便番号を7桁になるように入力してください（ハイフン付きや分割でも可）', 'error');
+    return;
+  }
+  setValue(zip1Id, parts.zip1);
+  setValue(zip2Id, parts.zip2);
+  const result = await PostalUtil.lookup(code);
   if (result) {
     setValue(prefId, result.prefecture);
     setValue(cityId, result.city + result.address);

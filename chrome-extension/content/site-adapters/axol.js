@@ -242,8 +242,8 @@ const AxolAdapter = {
       ...flat,
       prefecture: prefCode || flat.prefecture,
       prefectureVacation: prefVacCode || flat.homePrefecture,
-      zipVacation1: c.homeZip1 || '',
-      zipVacation2: c.homeZip2 || '',
+      zipVacation1: flat.homeZip1 || '',
+      zipVacation2: flat.homeZip2 || '',
       cityVacation: flat.homeCity || '',
       addressVacation: flat.homeAddress || '',
       buildingVacation: flat.homeBuilding || '',
@@ -587,88 +587,67 @@ const AxolAdapter = {
     return (form && form.querySelector(sel)) || document.querySelector(sel);
   },
 
-  _injectInlineScript(code) {
-    const s = document.createElement('script');
-    s.textContent = code;
-    (document.documentElement || document.head || document.body).appendChild(s);
-    s.remove();
+  /**
+   * CSP がページへのインライン script 注入を禁止している環境があるため、
+   * 同一 DOM ノードに対してコンテンツスクリプトから click / change を送る。
+   */
+  _safeDomClick(el) {
+    if (!el) return false;
+    try {
+      el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+      el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+      el.click();
+      return true;
+    } catch (_) {
+      return false;
+    }
   },
 
   _injectPageClickConditionEdit() {
-    this._injectInlineScript(`(function(){
-      try {
-        var btn = document.querySelector('#jsAxolSchool_dcd_search_edit')
-          || document.querySelector('input[type="button"][value="条件変更"]');
-        if (!btn) return;
-        if (window.jQuery) jQuery(btn).trigger('click');
-        else btn.click();
-      } catch (e) {}
-    })();`);
+    const btn =
+      document.querySelector('#jsAxolSchool_dcd_search_edit') ||
+      document.querySelector('input[type="button"][value="条件変更"]');
+    this._safeDomClick(btn);
   },
 
   _injectPageClickHighSchoolSearch() {
-    this._injectInlineScript(`(function(){
-      try {
-        var f = document.querySelector('form[name="form1"]') || document.querySelector('form');
-        var btn = (f && f.querySelector('input[type="button"][value="高校検索"]'))
-          || document.querySelector('input[type="button"][value="高校検索"]');
-        if (!btn) return;
-        if (window.jQuery) jQuery(btn).trigger('click');
-        else btn.click();
-      } catch (e) {}
-    })();`);
+    const form = document.querySelector('form[name="form1"]') || document.querySelector('form');
+    const btn =
+      (form && form.querySelector('input[type="button"][value="高校検索"]')) ||
+      document.querySelector('input[type="button"][value="高校検索"]');
+    this._safeDomClick(btn);
   },
 
   _injectPageClickSchoolSearch() {
-    this._injectInlineScript(`(function(){
-      try {
-        var f = document.querySelector('form[name="form1"]') || document.querySelector('form');
-        var btn = (f && f.querySelector('input[type="button"][value="学校検索"]'))
-          || document.querySelector('input[type="button"][value="学校検索"]');
-        if (!btn) return;
-        if (window.jQuery) jQuery(btn).trigger('click');
-        else btn.click();
-      } catch (e) {}
-    })();`);
+    const form = document.querySelector('form[name="form1"]') || document.querySelector('form');
+    const btn =
+      (form && form.querySelector('input[type="button"][value="学校検索"]')) ||
+      document.querySelector('input[type="button"][value="学校検索"]');
+    this._safeDomClick(btn);
   },
 
   _injectPageSelectValueByName(name, value) {
-    const n = JSON.stringify(String(name));
-    const v = JSON.stringify(String(value ?? ''));
-    this._injectInlineScript(`(function(){
-      try {
-        var name = ${n};
-        var val = ${v};
-        var f = document.querySelector('form[name="form1"]') || document.querySelector('form');
-        var sel = (f && f.querySelector('select[name="' + name + '"]'))
-          || document.querySelector('select[name="' + name + '"]');
-        if (!sel) return;
-        if (window.jQuery) {
-          jQuery(sel).val(val).trigger('change').trigger('blur');
-        } else {
-          sel.value = val;
-          sel.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-      } catch (e) {}
-    })();`);
+    const nm = String(name || '');
+    if (!nm) return;
+    const esc = GenericAdapter._cssEscapeIdent(nm);
+    const form = document.querySelector('form[name="form1"]') || document.querySelector('form');
+    const sel =
+      (form && form.querySelector(`select[name="${esc}"]`)) ||
+      document.querySelector(`select[name="${esc}"]`);
+    if (!sel) return;
+    GenericAdapter.fillElement(sel, String(value ?? ''));
   },
 
   _injectPageClickAutoGakkei() {
-    this._injectInlineScript(`(function(){
-      try {
-        var f = document.querySelector('form[name="form1"]') || document.querySelector('form');
-        var buttons = f ? f.querySelectorAll('input[type="button"],button') : [];
-        for (var i = 0; i < buttons.length; i++) {
-          var btn = buttons[i];
-          var v = (btn.value || btn.textContent || '').trim();
-          if (v.indexOf('学科から自動選択') !== -1) {
-            if (window.jQuery) jQuery(btn).trigger('click');
-            else btn.click();
-            return;
-          }
-        }
-      } catch (e) {}
-    })();`);
+    const form = document.querySelector('form[name="form1"]') || document.querySelector('form');
+    const buttons = form ? form.querySelectorAll('input[type="button"],button') : [];
+    for (const btn of buttons) {
+      const v = (btn.value || btn.textContent || '').trim();
+      if (v.includes('学科から自動選択')) {
+        this._safeDomClick(btn);
+        return;
+      }
+    }
   },
 
   _maybeHighlight(el, key, highlightFilled) {
@@ -1074,68 +1053,42 @@ const AxolAdapter = {
   },
 
   /**
-   * コンテンツスクリプトは isolated world のため window.jQuery が見えない。
-   * Axol FormBuilder はページ側 jQuery で input を購読しているため、MAIN 世界で val+trigger する。
+   * Axol のメール欄はもともとページ MAIN の jQuery で注入していたが、
+   * axol.jp の CSP がインライン script を禁止するため実行されず空欄になる。
+   * 同一 DOM ノードに対してネイティブ value + イベントを送ればページ側リスナにも届く。
    */
-  _injectPageMailInputFill(name, value) {
-    const p = { name: String(name), value: String(value ?? '') };
-    /* querySelector は非表示の複製の先頭を掴むと、表示側の kmail/kmail2 が空のままになる。extendFillPlan と同様に可視を優先 */
-    const code = `(function(){
-      var p = ${JSON.stringify(p)};
-      try {
-        function _afpVis(el) {
-          var node = el;
-          while (node && node.nodeType === 1) {
-            var st = window.getComputedStyle(node);
-            if (st.display === 'none' || st.visibility === 'hidden') return false;
-            node = node.parentElement;
-          }
-          return true;
-        }
-        function _afpPick(nm) {
-          var f = document.querySelector('form[name="form1"]') || document.querySelector('form') || document.forms[0];
-          var cand = [];
-          function collect(root) {
-            if (!root || !root.getElementsByTagName) return;
-            var inputs = root.getElementsByTagName('input');
-            for (var i = 0; i < inputs.length; i++) {
-              if (inputs[i].getAttribute('name') === nm) cand.push(inputs[i]);
-            }
-          }
-          if (f) collect(f);
-          if (!cand.length) collect(document);
-          for (var j = 0; j < cand.length; j++) {
-            if (_afpVis(cand[j])) return cand[j];
-          }
-          return cand[0] || null;
-        }
-        var inp = _afpPick(p.name);
-        if (!inp) return;
-        if (window.jQuery) {
-          var $i = jQuery(inp);
-          $i.focus();
-          $i.val(p.value);
-          $i.trigger('keydown').trigger('keyup').trigger('input').trigger('change');
-          if (p.name === 'email2' || p.name === 'kmail2') {
-            var peer = p.name === 'email2' ? 'email' : 'kmail';
-            var o = _afpPick(peer);
-            if (o) jQuery(o).trigger('input').trigger('change').trigger('blur');
-            $i.trigger('input').trigger('change');
-          }
-          $i.trigger('blur');
-        } else {
-          inp.focus();
-          inp.value = p.value;
-          inp.dispatchEvent(new Event('input', { bubbles: true }));
-          inp.dispatchEvent(new Event('change', { bubbles: true }));
-          inp.blur();
-        }
-      } catch (e) {}
-    })();`;
-    const s = document.createElement('script');
-    s.textContent = code;
-    (document.documentElement || document.head || document.body).appendChild(s);
-    s.remove();
+  _setNativeInputValue(el, value) {
+    const v = String(value ?? '');
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+    if (setter) setter.call(el, v);
+    else el.value = v;
+  },
+
+  _fillAxolMailInput(el, value) {
+    if (!el) return false;
+    const name = el.name;
+    const str = String(value ?? '');
+
+    if (name === 'kmail2' && str) {
+      const kmPeer = this._firstVisibleInputByName('kmail');
+      if (kmPeer) {
+        this._setNativeInputValue(kmPeer, str);
+        GenericAdapter._dispatchEvents(kmPeer, ['focus', 'keydown', 'keyup', 'input', 'change']);
+      }
+    }
+
+    this._setNativeInputValue(el, str);
+    GenericAdapter._dispatchEvents(el, ['focus', 'keydown', 'keyup', 'input', 'change']);
+
+    if (name === 'email2' || name === 'kmail2') {
+      const peerName = name === 'email2' ? 'email' : 'kmail';
+      const peer = this._firstVisibleInputByName(peerName);
+      if (peer) GenericAdapter._dispatchEvents(peer, ['input', 'change', 'blur']);
+      GenericAdapter._dispatchEvents(el, ['input', 'change']);
+    }
+
+    if (name !== 'kmail') GenericAdapter._dispatchEvents(el, ['blur']);
+
     return true;
   },
 
@@ -1147,10 +1100,7 @@ const AxolAdapter = {
   },
 
   fillElement(el, value) {
-    if (this._isAxolMailInput(el)) {
-      const n = el.name;
-      return this._injectPageMailInputFill(n, value);
-    }
+    if (this._isAxolMailInput(el)) return this._fillAxolMailInput(el, value);
     return GenericAdapter.fillElement(el, value);
   },
 };

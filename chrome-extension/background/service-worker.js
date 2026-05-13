@@ -83,16 +83,25 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 // Message handlers
 // ──────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  const safeRespond = (payload) => {
+    try {
+      sendResponse(payload);
+    } catch (_) {}
+  };
+
   if (msg.type === 'OPEN_OPTIONS') {
     chrome.runtime.openOptionsPage();
-    sendResponse({ ok: true });
-    return true;
+    safeRespond({ ok: true });
+    return false;
   }
 
   if (msg.type === 'GET_CURRENT_TAB') {
-    chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
-      sendResponse({ tab });
-    });
+    chrome.tabs
+      .query({ active: true, currentWindow: true })
+      .then(([tab]) => safeRespond({ tab }))
+      .catch(() => safeRespond({ tab: undefined }));
     return true;
   }
+
+  return false;
 });

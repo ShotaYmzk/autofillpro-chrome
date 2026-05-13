@@ -19,93 +19,10 @@ const GenericAdapter = {
   },
 
   /**
-   * jqTransform 等はページの jQuery で val / blur を購読するため、
-   * isolated world の dispatchEvent だけでは表示・検証が追従しないことがある。
-   * MAIN 世界に短いスクリプトを注入し、ページ側 jQuery があればそれで同期する。
+   * 以前はページ MAIN の jQuery 同期のためにインライン script を注入していたが、
+   * Axol 等の CSP（script-src で unsafe-inline 禁止）によりブロックされコンソールが埋まる。
+   * 同一 DOM に対するネイティブ value + dispatch でページ側リスナに届くため注入は行わない。
    */
-  _injectPageWorldControlFill(el, value) {
-    const name = el.getAttribute('name');
-    if (!name) return false;
-    const form = el.form;
-    let formSel = '';
-    if (form) {
-      if (form.id) formSel = `form#${this._cssEscapeIdent(form.id)}`;
-      else if (form.getAttribute('name'))
-        formSel = `form[name="${this._cssEscapeIdent(form.getAttribute('name'))}"]`;
-    }
-
-    const lowerTag = el.tagName.toLowerCase();
-    const tag = lowerTag === 'select' ? 'select' : lowerTag === 'textarea' ? 'textarea' : 'input';
-    const scopeSel = formSel || '';
-
-    let index = 0;
-    try {
-      const root = form || document;
-      const all = root.querySelectorAll('input,textarea,select');
-      const named = [];
-      for (let i = 0; i < all.length; i++) {
-        const node = all[i];
-        if (node.getAttribute('name') !== name) continue;
-        const nt = node.tagName.toLowerCase();
-        if (tag === 'select' && nt !== 'select') continue;
-        if (tag === 'textarea' && nt !== 'textarea') continue;
-        if (tag === 'input' && nt !== 'input') continue;
-        named.push(node);
-      }
-      const idx = named.indexOf(el);
-      if (idx >= 0) index = idx;
-    } catch (_) {}
-
-    const p = {
-      scopeSel,
-      tag,
-      name: String(name),
-      index,
-      value: String(value ?? ''),
-    };
-
-    const code = `(function(){
-      var p = ${JSON.stringify(p)};
-      try {
-        var root = document;
-        if (p.scopeSel) {
-          root = document.querySelector(p.scopeSel);
-          if (!root) root = document;
-        }
-        var nodes = root.querySelectorAll('input,textarea,select');
-        var same = [];
-        for (var i = 0; i < nodes.length; i++) {
-          var n = nodes[i];
-          if (n.name !== p.name) continue;
-          var nt = (n.tagName || '').toLowerCase();
-          if (p.tag === 'select' && nt !== 'select') continue;
-          if (p.tag === 'textarea' && nt !== 'textarea') continue;
-          if (p.tag === 'input' && nt !== 'input') continue;
-          same.push(n);
-        }
-        var el = same[p.index] || same[0];
-        if (!el) return;
-        if (window.jQuery) {
-          var $e = window.jQuery(el);
-          $e.focus();
-          $e.val(p.value);
-          $e.trigger('keydown').trigger('keyup').trigger('input').trigger('change');
-          $e.trigger('blur');
-        } else {
-          el.focus();
-          el.value = p.value;
-          el.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
-          el.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
-          el.dispatchEvent(new Event('blur', { bubbles: true, cancelable: true }));
-        }
-      } catch (e) {}
-    })();`;
-    const script = document.createElement('script');
-    script.textContent = code;
-    (document.documentElement || document.head || document.body).appendChild(script);
-    script.remove();
-    return true;
-  },
 
   /**
    * Fill a single element with a value, dispatching all necessary events
@@ -138,9 +55,6 @@ const GenericAdapter = {
   },
 
   _fillText(el, value) {
-    if (el?.getAttribute('name')) {
-      this._injectPageWorldControlFill(el, value);
-    }
     const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
       window.HTMLInputElement.prototype, 'value'
     )?.set ||
@@ -177,9 +91,6 @@ const GenericAdapter = {
     }
 
     if (opt) {
-      if (el?.getAttribute('name')) {
-        this._injectPageWorldControlFill(el, opt.value);
-      }
       el.value = opt.value;
       this._dispatchEvents(el, ['focus', 'input', 'change', 'blur']);
       return true;

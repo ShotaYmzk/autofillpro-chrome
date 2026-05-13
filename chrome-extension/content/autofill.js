@@ -12,6 +12,7 @@ const AutoFill = (() => {
   function initAdapters() {
     if (typeof AxolAdapter !== 'undefined') ADAPTERS.push(AxolAdapter);
     if (typeof IWebAdapter !== 'undefined') ADAPTERS.push(IWebAdapter);
+    if (typeof EntrySheetAdapter !== 'undefined') ADAPTERS.push(EntrySheetAdapter);
     if (typeof GenericAdapter !== 'undefined') ADAPTERS.push(GenericAdapter);
     ADAPTERS.sort((a, b) => (b.priority || 0) - (a.priority || 0));
   }
@@ -115,6 +116,11 @@ const AutoFill = (() => {
       filled += hsFilled || 0;
     }
 
+    if (typeof adapter.runAfterPageFill === 'function') {
+      const extraFilled = await adapter.runAfterPageFill(profile, { delay, highlightFilled, plan });
+      filled += typeof extraFilled === 'number' ? extraFilled : 0;
+    }
+
     return { plan, filled };
   }
 
@@ -191,62 +197,83 @@ const AutoFill = (() => {
   // Message listener — receives commands from popup
   // ──────────────────────────────────────────────
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    const safeRespond = (payload) => {
+      try {
+        sendResponse(payload);
+      } catch (_) {
+        /* 送信側が既に切断（ポップアップ閉じた等） */
+      }
+    };
+
     if (msg.type === 'AUTOFILL_FILL') {
       const { profile, settings } = msg;
       if (settings?.previewBeforeFill) {
-        fillPage(profile, { preview: true }).then(({ plan }) => {
-          // Show preview overlay
-          if (typeof AutoFillOverlay !== 'undefined') {
-            AutoFillOverlay.showPreview(plan, () => {
+        fillPage(profile, { preview: true })
+          .then(({ plan }) => {
+            if (typeof AutoFillOverlay !== 'undefined') {
+              /* プレビュー確定まで sendResponse を遅らせるとチャネルが閉じてエラーになるため先に応答 */
+              safeRespond({
+                success: true,
+                previewPending: true,
+                previewCount: plan.length,
+              });
+              AutoFillOverlay.showPreview(plan, () => {
+                fillPage(profile, {
+                  preview: false,
+                  delay: settings.fillDelay ?? 50,
+                  highlightFilled: settings.highlightFilled !== false,
+                }).catch(() => {});
+              });
+            } else {
               fillPage(profile, {
                 preview: false,
                 delay: settings.fillDelay ?? 50,
                 highlightFilled: settings.highlightFilled !== false,
-              }).then(({ filled }) => sendResponse({ success: true, filled }));
-            });
-          } else {
-            fillPage(profile, {
-              preview: false,
-              delay: settings.fillDelay ?? 50,
-              highlightFilled: settings.highlightFilled !== false,
-            }).then(({ filled }) => sendResponse({ success: true, filled }));
-          }
-        });
+              })
+                .then(({ filled }) => safeRespond({ success: true, filled }))
+                .catch((err) => safeRespond({ success: false, error: err.message }));
+            }
+          })
+          .catch((err) => safeRespond({ success: false, error: err.message }));
       } else {
         fillPage(profile, {
           preview: false,
           delay: settings?.fillDelay ?? 50,
           highlightFilled: settings?.highlightFilled !== false,
         })
-          .then(({ filled }) => sendResponse({ success: true, filled }))
-          .catch((err) => sendResponse({ success: false, error: err.message }));
+          .then(({ filled }) => safeRespond({ success: true, filled }))
+          .catch((err) => safeRespond({ success: false, error: err.message }));
       }
-      return true; // async
+      return true;
     }
 
     if (msg.type === 'AUTOFILL_PREVIEW') {
       const { profile } = msg;
-      fillPage(profile, { preview: true }).then(({ plan }) => {
-        if (typeof AutoFillOverlay !== 'undefined') {
-          AutoFillOverlay.showPreview(plan, () => {
-            chrome.runtime.sendMessage({ type: 'PREVIEW_CONFIRMED' });
-          });
-        }
-        sendResponse({ success: true, count: plan.length });
-      });
+      fillPage(profile, { preview: true })
+        .then(({ plan }) => {
+          if (typeof AutoFillOverlay !== 'undefined') {
+            AutoFillOverlay.showPreview(plan, () => {
+              chrome.runtime.sendMessage({ type: 'PREVIEW_CONFIRMED' });
+            });
+          }
+          safeRespond({ success: true, count: plan.length });
+        })
+        .catch((err) => safeRespond({ success: false, error: err.message }));
       return true;
     }
 
     if (msg.type === 'AUTOFILL_CLEAR_HIGHLIGHT') {
       if (typeof AutoFillOverlay !== 'undefined') AutoFillOverlay.clearHighlights();
-      sendResponse({ success: true });
-      return true;
+      safeRespond({ success: true });
+      return false;
     }
 
     if (msg.type === 'PING') {
-      sendResponse({ ready: true });
-      return true;
+      safeRespond({ ready: true });
+      return false;
     }
+
+    return false;
   });
 
   async function runFillFromUI() {

@@ -58,6 +58,8 @@ const DEFAULT_PROFILE = {
     gradSchoolPref: '',
     faculty: '',
     dept: '',
+    /** 申告文理区分（例: NRI dept-select の「文系」「理系」） */
+    declaredStream: '',
     highSchoolPref: '',
     highSchoolName: '',
     highSchoolSearchWord: '',
@@ -86,14 +88,30 @@ const DEFAULT_SETTINGS = {
 
 const StorageUtil = {
   async get(keys) {
-    return new Promise((resolve) => {
-      chrome.storage.local.get(keys, resolve);
+    return new Promise((resolve, reject) => {
+      try {
+        chrome.storage.local.get(keys ?? null, (result) => {
+          const err = chrome.runtime?.lastError;
+          if (err) reject(new Error(err.message));
+          else resolve(result);
+        });
+      } catch (e) {
+        reject(e);
+      }
     });
   },
 
   async set(data) {
-    return new Promise((resolve) => {
-      chrome.storage.local.set(data, resolve);
+    return new Promise((resolve, reject) => {
+      try {
+        chrome.storage.local.set(data, () => {
+          const err = chrome.runtime?.lastError;
+          if (err) reject(new Error(err.message));
+          else resolve();
+        });
+      } catch (e) {
+        reject(e);
+      }
     });
   },
 

@@ -59,7 +59,7 @@
       <div class="main__header">
         <div>
           <h1 id="profileNameTitle" class="main__title">プロフィール設定</h1>
-          <p class="main__subtitle">情報を入力して保存してください</p>
+          <p class="main__subtitle">情報を入力し、「保存する」まで確定されません（自動入力は保存後の内容を読みます）</p>
         </div>
         <div class="main__actions">
           <button id="deleteProfileBtn" class="btn btn--danger btn--sm" style="display:none">削除</button>
@@ -180,11 +180,12 @@
             <div class="form-group">
               <label class="form-label">郵便番号</label>
               <div class="zip-group">
-                <input type="text" id="zip1" class="form-input" placeholder="100" maxlength="3" />
+                <input type="text" id="zip1" class="form-input" placeholder="100 / 100-0001 など" maxlength="12" />
                 <span class="phone-sep">-</span>
-                <input type="text" id="zip2" class="form-input" placeholder="0001" maxlength="4" />
+                <input type="text" id="zip2" class="form-input" placeholder="0001" maxlength="12" />
                 <button id="lookupZipBtn" class="btn btn--ghost btn--sm">住所を検索</button>
               </div>
+              <p class="form-hint">7桁をそのまま・ハイフン付き・3桁+4桁のいずれでも可。保存時に分割して正規化します。</p>
             </div>
             <div class="form-group"></div>
             <div class="form-group">
@@ -224,9 +225,9 @@
             <div class="form-group">
               <label class="form-label">郵便番号</label>
               <div class="zip-group">
-                <input type="text" id="homeZip1" class="form-input" placeholder="000" maxlength="3" />
+                <input type="text" id="homeZip1" class="form-input" placeholder="000 / 入力形式は現住所と同様" maxlength="12" />
                 <span class="phone-sep">-</span>
-                <input type="text" id="homeZip2" class="form-input" placeholder="0000" maxlength="4" />
+                <input type="text" id="homeZip2" class="form-input" placeholder="0000" maxlength="12" />
                 <button id="lookupHomeZipBtn" class="btn btn--ghost btn--sm">住所を検索</button>
               </div>
             </div>
@@ -359,6 +360,15 @@
             <div class="form-group">
               <label class="form-label">学科名</label>
               <input type="text" id="dept" class="form-input" placeholder="例：○○学科" />
+            </div>
+            <div class="form-group form-grid--span2">
+              <label class="form-label">申告文理（サイトの「文系／理系」欄用）</label>
+              <select id="declaredStream" class="form-select">
+                <option value="">（未指定）</option>
+                <option value="理系">理系</option>
+                <option value="文系">文系</option>
+              </select>
+              <p class="form-hint">マイページの学科選択後の「申告文理区分」などに自動入力されます</p>
             </div>
           </div>
           <div class="form-grid form-grid--4 mt-16">

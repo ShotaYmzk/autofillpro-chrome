@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "AutoFillPro - 就活マイページ自動入力",
   "short_name": "AutoFillPro",
-  "version": "1.2.3",
+  "version": "1.2.7",
   "description": "就活マイページへの個人情報入力を1クリックで自動化。複数プロフィール・プレビュー確認・郵便番号補完に対応。",
   "icons": {
     "16": "icons/icon16.png",
@@ -36,6 +36,8 @@
         "content/site-adapters/generic.js",
         "content/site-adapters/axol.js",
         "content/site-adapters/iweb.js",
+        "content/site-adapters/school-search-flow.js",
+        "content/site-adapters/entry-sheet.js",
         "content/autofill.js",
         "content/float-button.js"
       ],
