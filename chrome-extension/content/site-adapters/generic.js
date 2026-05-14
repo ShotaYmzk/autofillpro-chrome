@@ -54,6 +54,23 @@ const GenericAdapter = {
     return this._fillText(el, value);
   },
 
+  /**
+   * 携帯 kttel* 等に付いた古い onkeyup 実装が、合成 keydown/keyup と実値を連結して eval 相当の
+   * 文字列を組み立てようとして SyntaxError（Unexpected identifier 'kttel' 等）になることがある。
+   * tel 系は input / change 中心に留める。
+   */
+  _useGentleKeyboardEventsForTextInput(el) {
+    const tag = (el.tagName || '').toLowerCase();
+    if (tag !== 'input') return false;
+    const t = (el.type || 'text').toLowerCase();
+    if (t === 'tel') return true;
+    const n = String(el.name || '');
+    if (!n) return false;
+    return /^(kttel|ktel|gtel|telk|mobiletel|hometel|home_tel|phone_no|mobile_no|fax)\d*$/i.test(
+      n
+    );
+  },
+
   _fillText(el, value) {
     const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
       window.HTMLInputElement.prototype, 'value'
@@ -67,7 +84,11 @@ const GenericAdapter = {
     } else {
       el.value = value;
     }
-    this._dispatchEvents(el, ['focus', 'input', 'keydown', 'keyup', 'change', 'blur']);
+    const gentle = this._useGentleKeyboardEventsForTextInput(el);
+    const types = gentle
+      ? ['focus', 'input', 'change', 'blur']
+      : ['focus', 'input', 'keydown', 'keyup', 'change', 'blur'];
+    this._dispatchEvents(el, types);
     return true;
   },
 
