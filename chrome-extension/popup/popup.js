@@ -6,6 +6,11 @@ let settings = {};
 let currentTab = null;
 
 async function init() {
+  const verEl = document.querySelector('.footer__version');
+  if (verEl) {
+    verEl.textContent = `v${chrome.runtime.getManifest().version}`;
+  }
+
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   currentTab = tab;
 
@@ -179,16 +184,20 @@ async function doPreview() {
 }
 
 async function injectContentScripts() {
+  // Keep in sync with manifest.json content_scripts js[] order
   await chrome.scripting.executeScript({
     target: { tabId: currentTab.id },
     files: [
       'utils/storage.js',
       'utils/furigana.js',
+      'utils/postal.js',
       'content/field-matcher.js',
       'content/overlay.js',
       'content/site-adapters/generic.js',
       'content/site-adapters/axol.js',
       'content/site-adapters/iweb.js',
+      'content/site-adapters/school-search-flow.js',
+      'content/site-adapters/entry-sheet.js',
       'content/autofill.js',
       'content/float-button.js',
     ],

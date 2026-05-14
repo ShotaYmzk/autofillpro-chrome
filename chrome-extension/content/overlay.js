@@ -242,7 +242,7 @@ const AutoFillOverlay = (() => {
 
     const rows = plan.map(({ key, value }) => `
       <div class="afp-row">
-        <div class="afp-row__label">${FIELD_LABELS[key] || key}</div>
+        <div class="afp-row__label">${esc(FIELD_LABELS[key] || key)}</div>
         <div class="afp-row__arrow">→</div>
         <div class="afp-row__value" title="${esc(value)}">${esc(value)}</div>
       </div>
