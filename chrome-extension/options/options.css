@@ -396,6 +396,14 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Sego
   color: #15803d;
 }
 
+.form-hint.home-address-collapsed-hint {
+  margin: 0 0 12px;
+}
+
+.form-hint.education-grad-collapsed-hint {
+  margin: 0 0 12px;
+}
+
 /* ========================
    Toast
    ======================== */

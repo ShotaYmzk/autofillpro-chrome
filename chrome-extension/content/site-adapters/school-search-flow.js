@@ -212,7 +212,8 @@ const SchoolSearchFlowAdapter = {
       if (/博士/.test(type) || deg === '博士') return '1';
       return '2';
     }
-    if (/大学/.test(type)) return '3';
+    // 「大学院」より後で判定（サブストリングでの誤爆を避ける）
+    if (type === '大学') return '3';
     return '';
   },
 

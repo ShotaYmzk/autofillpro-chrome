@@ -123,6 +123,60 @@ function populateStaticSelects() {
   }
 }
 
+function unifySchoolTypeKey(s) {
+  return String(s || '')
+    .trim()
+    .replace(/\(/g, '（')
+    .replace(/\)/g, '）')
+    .replace(/\s+/g, '');
+}
+
+/**
+ * select の value と保存文字列が一致しないと、ブラウザは前の選択を残すことがある。
+ * 半角括弧・空白の差も吸収する。
+ */
+function syncSchoolTypeFromProfile(stored) {
+  const sel = document.getElementById('schoolType');
+  if (!sel) return;
+  const raw = stored == null ? '' : String(stored).trim();
+  if (!raw) {
+    sel.value = '';
+    applyEducationDependentUi();
+    return;
+  }
+  sel.value = raw;
+  if (sel.value !== raw) {
+    const key = unifySchoolTypeKey(raw);
+    const hit = [...sel.options].find((o) => o.value && unifySchoolTypeKey(o.value) === key);
+    if (hit) sel.value = hit.value;
+  }
+  applyEducationDependentUi();
+}
+
+/** 「現住所と同じ」のとき帰省先ブロックの入力欄を隠す */
+function applyVacationHomeUi() {
+  const cb = document.getElementById('vacationSameAsCurrent');
+  const wrap = document.getElementById('homeAddressFieldsWrap');
+  const hint = document.getElementById('homeAddressCollapsedHint');
+  const hide = !!(cb && cb.checked);
+  if (wrap) wrap.style.display = hide ? 'none' : '';
+  if (hint) hint.hidden = !hide;
+}
+
+/** 学校区分に応じて学位・大学院ブロックの表示を切り替え */
+function applyEducationDependentUi() {
+  const sel = document.getElementById('schoolType');
+  const type = sel ? String(sel.value || '') : '';
+  const isGrad = /大学院/.test(type);
+  const degGrp = document.getElementById('degreeFormGroup');
+  if (degGrp) degGrp.style.display = isGrad ? '' : 'none';
+
+  const gradCard = document.getElementById('educationGradCard');
+  const gradHint = document.getElementById('educationGradCollapsedHint');
+  if (gradCard) gradCard.style.display = isGrad ? '' : 'none';
+  if (gradHint) gradHint.hidden = isGrad;
+}
+
 /** 保存値がコード or ラベルのどちらでも departmentSystem に復元 */
 function syncDepartmentSystemFromProfile(stored) {
   const sel = document.getElementById('departmentSystem');
@@ -243,8 +297,9 @@ function loadProfile(id) {
     setValue('homeBuilding', c.homeBuilding);
 
     setChecked('vacationSameAsCurrent', !!c.vacationSameAsCurrent);
+    applyVacationHomeUi();
 
-    setValue('schoolType', e.schoolType);
+    syncSchoolTypeFromProfile(e.schoolType);
     setValue('schoolSetup', e.schoolSetup);
     setValue('degree', e.degree || '');
     setValue('gradSchoolName', e.gradSchoolName);
@@ -384,6 +439,7 @@ function loadSettings() {
   setChecked('previewBeforeFill', !!settings.previewBeforeFill);
   setChecked('autoDetect', settings.autoDetect !== false);
   setChecked('showFloatingButton', settings.showFloatingButton !== false);
+  setChecked('floatingButtonAllSites', settings.floatingButtonDedicatedSitesOnly === false);
   setValue('fillDelay', settings.fillDelay ?? 50);
 }
 
@@ -393,6 +449,7 @@ function collectSettings() {
     previewBeforeFill: isChecked('previewBeforeFill'),
     autoDetect: isChecked('autoDetect'),
     showFloatingButton: isChecked('showFloatingButton'),
+    floatingButtonDedicatedSitesOnly: !isChecked('floatingButtonAllSites'),
     fillDelay: parseInt(getValue('fillDelay'), 10) || 50,
   };
 }
@@ -411,6 +468,9 @@ function bindEvents() {
     e.preventDefault();
     e.returnValue = '';
   });
+
+  document.getElementById('schoolType')?.addEventListener('change', applyEducationDependentUi);
+  document.getElementById('vacationSameAsCurrent')?.addEventListener('change', applyVacationHomeUi);
 
   // Tab navigation
   document.querySelectorAll('.nav-item').forEach((link) => {

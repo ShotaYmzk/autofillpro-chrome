@@ -326,7 +326,7 @@ const AutoFill = (() => {
     init();
   }
 
-  return { fillPage, runFillFromUI };
+  return { fillPage, runFillFromUI, getAdapter };
 })();
 
 if (typeof window !== 'undefined') {

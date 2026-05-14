@@ -2,3 +2,6 @@
 *.log
 node_modules/
 .cursor/
+
+# 配布用 ZIP はローカルのみ（必要なら Release で添付）
+*.zip

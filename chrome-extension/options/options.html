@@ -221,34 +221,39 @@
             帰省先住所
             <span class="badge badge--secondary">実家・帰省先</span>
           </div>
-          <div class="form-grid form-grid--2">
-            <div class="form-group">
-              <label class="form-label">郵便番号</label>
-              <div class="zip-group">
-                <input type="text" id="homeZip1" class="form-input" placeholder="000 / 入力形式は現住所と同様" maxlength="12" />
-                <span class="phone-sep">-</span>
-                <input type="text" id="homeZip2" class="form-input" placeholder="0000" maxlength="12" />
-                <button id="lookupHomeZipBtn" class="btn btn--ghost btn--sm">住所を検索</button>
+          <p id="homeAddressCollapsedHint" class="form-hint home-address-collapsed-hint" hidden>
+            「現住所と同じ」のため帰省先の入力は不要です。チェックを外すと入力欄が表示されます。
+          </p>
+          <div id="homeAddressFieldsWrap" class="home-address-fields">
+            <div class="form-grid form-grid--2">
+              <div class="form-group">
+                <label class="form-label">郵便番号</label>
+                <div class="zip-group">
+                  <input type="text" id="homeZip1" class="form-input" placeholder="000 / 入力形式は現住所と同様" maxlength="12" />
+                  <span class="phone-sep">-</span>
+                  <input type="text" id="homeZip2" class="form-input" placeholder="0000" maxlength="12" />
+                  <button id="lookupHomeZipBtn" class="btn btn--ghost btn--sm">住所を検索</button>
+                </div>
               </div>
-            </div>
-            <div class="form-group"></div>
-            <div class="form-group">
-              <label class="form-label">都道府県</label>
-              <select id="homePrefecture" class="form-select">
-                <option value="">選択</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">市区町村</label>
-              <input type="text" id="homeCity" class="form-input" placeholder="例：大阪市北区" />
-            </div>
-            <div class="form-group form-grid--span2">
-              <label class="form-label">番地</label>
-              <input type="text" id="homeAddress" class="form-input" placeholder="例：1-2-3" />
-            </div>
-            <div class="form-group form-grid--span2">
-              <label class="form-label">建物名・部屋番号</label>
-              <input type="text" id="homeBuilding" class="form-input" placeholder="例：建物名・号室" />
+              <div class="form-group"></div>
+              <div class="form-group">
+                <label class="form-label">都道府県</label>
+                <select id="homePrefecture" class="form-select">
+                  <option value="">選択</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">市区町村</label>
+                <input type="text" id="homeCity" class="form-input" placeholder="例：大阪市北区" />
+              </div>
+              <div class="form-group form-grid--span2">
+                <label class="form-label">番地</label>
+                <input type="text" id="homeAddress" class="form-input" placeholder="例：1-2-3" />
+              </div>
+              <div class="form-group form-grid--span2">
+                <label class="form-label">建物名・部屋番号</label>
+                <input type="text" id="homeBuilding" class="form-input" placeholder="例：建物名・号室" />
+              </div>
             </div>
           </div>
         </div>
@@ -280,7 +285,7 @@
                 <option value="私立">私立</option>
               </select>
             </div>
-            <div class="form-group">
+            <div class="form-group" id="degreeFormGroup">
               <label class="form-label">学位（大学院のみ）</label>
               <select id="degree" class="form-select">
                 <option value="">（学校区分から自動でも可）</option>
@@ -292,7 +297,10 @@
           </div>
         </div>
 
-        <div class="card">
+        <p id="educationGradCollapsedHint" class="form-hint education-grad-collapsed-hint" hidden>
+          大学院の入力欄は、学校区分で「大学院」を選んだときだけ表示されます。
+        </p>
+        <div id="educationGradCard" class="card">
           <div class="card__header">大学院情報 <span class="card__note">（大学院に進学している場合）</span></div>
           <div class="form-grid form-grid--2">
             <div class="form-group">
@@ -479,10 +487,20 @@
             <div class="settings-item">
               <div class="settings-item__info">
                 <div class="settings-item__label">ページ内に「自動入力」ボタンを表示</div>
-                <div class="settings-item__desc">マイページ右下に緑のフローティングボタンを表示します（Axol など）</div>
+                <div class="settings-item__desc">対応するマイページ右下に緑のフローティングボタンを出します（下の「すべてのサイト…」がオフのときは Axol・i-Web など認識したサイトのみ）</div>
               </div>
               <label class="toggle">
                 <input type="checkbox" id="showFloatingButton" />
+                <span class="toggle__slider"></span>
+              </label>
+            </div>
+            <div class="settings-item">
+              <div class="settings-item__info">
+                <div class="settings-item__label">すべてのサイトでフローティングボタンを表示</div>
+                <div class="settings-item__desc">オンにすると、画像編集サイトなど関係ないページにもボタンが出ます。汎用フォームへのワンクリック入力を試すときだけオンにしてください</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="floatingButtonAllSites" />
                 <span class="toggle__slider"></span>
               </label>
             </div>

@@ -84,6 +84,8 @@ const DEFAULT_SETTINGS = {
   autoDetect: true,
   fillDelay: 50,
   showFloatingButton: true,
+  /** true のときフローティングボタンは専用アダプタが効くページにのみ表示 */
+  floatingButtonDedicatedSitesOnly: true,
 };
 
 const StorageUtil = {

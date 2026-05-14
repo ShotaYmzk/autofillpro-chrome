@@ -10,6 +10,17 @@
     return /^https?:/i.test(location.protocol);
   }
 
+  /** Axol / i-Web / Entry Sheet など専用アダプタが選ばれるページのみ true（Generic は常時マッチするため除外） */
+  function pageHasDedicatedAdapter() {
+    try {
+      if (typeof AutoFill === 'undefined' || typeof AutoFill.getAdapter !== 'function') return false;
+      const adapter = AutoFill.getAdapter();
+      return !!(adapter && adapter.name !== 'generic');
+    } catch (_) {
+      return false;
+    }
+  }
+
   function mountButton() {
     const root = document.createElement('div');
     root.id = ROOT_ID;
@@ -105,13 +116,20 @@
     if (!allowedPage()) return;
 
     let show = true;
+    let dedicatedOnly = true;
     try {
       const s = await StorageUtil.getSettings();
       show = s.showFloatingButton !== false;
+      dedicatedOnly = s.floatingButtonDedicatedSitesOnly !== false;
     } catch (_) {}
 
     const existing = document.getElementById(ROOT_ID);
     if (!show) {
+      existing?.remove();
+      return;
+    }
+
+    if (dedicatedOnly && !pageHasDedicatedAdapter()) {
       existing?.remove();
       return;
     }

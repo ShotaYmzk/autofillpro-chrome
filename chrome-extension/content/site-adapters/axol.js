@@ -68,8 +68,23 @@ const AxolAdapter = {
     return null;
   },
 
+  /**
+   * kubun のラベル向け。「大学」が「大学院」「短期大学」に誤マッチしないようにする。
+   * 「専門学校」が「高等専門学校」に誤マッチしないようにする。
+   */
+  _schoolKindLabelSubstringMatches(labelNorm, wantNorm) {
+    if (!labelNorm.includes(wantNorm)) return false;
+    if (wantNorm === '大学') {
+      if (/大学院/.test(labelNorm)) return false;
+      if (/短期大学/.test(labelNorm)) return false;
+    }
+    if (wantNorm === '専門学校' && /高等専門/.test(labelNorm)) return false;
+    return true;
+  },
+
   /** kubun / kokushi / degree など name が一意な Axol のラジオ */
-  _pickRadioByNameAndLabel(inputName, desiredLabel) {
+  _pickRadioByNameAndLabel(inputName, desiredLabel, opts = {}) {
+    const schoolKind = !!opts.schoolKind;
     const want = this._norm(desiredLabel);
     if (!want) return null;
     const radios = [...document.querySelectorAll(`input[type="radio"][name="${inputName}"]`)];
@@ -84,18 +99,23 @@ const AxolAdapter = {
     }
     for (const r of radios) {
       const txt = this._norm(r.closest('label')?.textContent || '');
-      if (txt.includes(want)) return r;
+      if (schoolKind) {
+        if (this._schoolKindLabelSubstringMatches(txt, want)) return r;
+      } else if (txt.includes(want)) {
+        return r;
+      }
     }
     return null;
   },
 
   _schoolKindLabel(type) {
-    const t = type || '';
+    const t = String(type || '').trim();
     if (/大学院/.test(t)) return '大学院';
-    if (/短期大学/.test(t)) return '短期大学';
+    if (/短期大学|短大/.test(t)) return '短期大学';
     if (/高等専門/.test(t)) return '高等専門学校';
     if (/専門学校/.test(t)) return '専門学校';
-    if (/大学/.test(t)) return '大学';
+    // 「大学院」「短期大学」より後で判定。「国立大学」などを誤って大学にしない。
+    if (t === '大学') return '大学';
     return '';
   },
 
@@ -321,7 +341,7 @@ const AxolAdapter = {
     // 学校区分・設置区分（他ラジオと混ざらないよう name で絞る）
     const skLabel = flat.axolSchoolLabel;
     if (skLabel) {
-      const radio = this._pickRadioByNameAndLabel('kubun', skLabel);
+      const radio = this._pickRadioByNameAndLabel('kubun', skLabel, { schoolKind: true });
       if (radio) add(radio, 'schoolType', skLabel);
     }
 

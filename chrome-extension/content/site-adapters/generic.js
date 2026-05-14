@@ -98,10 +98,25 @@ const GenericAdapter = {
     return false;
   },
 
+  /**
+   * ラジオのラベル部分一致で「大学」→「大学院」「短期大学」、「専門学校」→「高等専門学校」に誤爆しない。
+   * （Axol kubun など value が 1/2 でラベルだけが頼りなときに必須）
+   */
+  _radioLabelSubstringMatches(labelNorm, valNorm) {
+    if (!labelNorm || !valNorm) return false;
+    if (!labelNorm.includes(valNorm)) return false;
+    if (valNorm === '大学') {
+      if (/大学院/.test(labelNorm)) return false;
+      if (/短期大学/.test(labelNorm)) return false;
+    }
+    if (valNorm === '専門学校' && /高等専門/.test(labelNorm)) return false;
+    return true;
+  },
+
   _fillRadio(el, value) {
     const name = el.name;
     if (!name) return false;
-    const radios = document.querySelectorAll(`input[type=radio][name="${CSS.escape(name)}"]`);
+    const radios = [...document.querySelectorAll(`input[type=radio][name="${CSS.escape(name)}"]`)];
     const normalize = (s) =>
       String(s || '')
         .trim()
@@ -120,15 +135,28 @@ const GenericAdapter = {
       return '';
     };
 
-    for (const radio of radios) {
+    const meta = radios.map((radio) => {
       const labelRaw = labelForRadio(radio);
       const labelText = normalize(labelRaw.replace(/\u3000/g, ' '));
       const radioValue = normalize(radio.value);
+      return { radio, labelText, radioValue };
+    });
 
-      let match =
-        (radioValue && radioValue === normVal) ||
-        (labelText && labelText === normVal);
-      if (!match && normVal) {
+    // 1) 値またはラベルの完全一致を全グループから優先（大学院より先に「大学」へ付かないようにする）
+    for (const { radio, labelText, radioValue } of meta) {
+      const exact =
+        (radioValue && radioValue === normVal) || (labelText && labelText === normVal);
+      if (exact) {
+        radio.checked = true;
+        this._dispatchEvents(radio, ['focus', 'change', 'blur']);
+        return true;
+      }
+    }
+
+    // 2) 部分一致（学校区分の誤マッチを除外）
+    for (const { radio, labelText, radioValue } of meta) {
+      let match = false;
+      if (normVal) {
         if (
           radioValue &&
           (radioValue.includes(normVal) || normVal.includes(radioValue))
@@ -138,7 +166,9 @@ const GenericAdapter = {
         if (
           !match &&
           labelText &&
-          (labelText.includes(normVal) || normVal.includes(labelText))
+          ((labelText.includes(normVal) &&
+            this._radioLabelSubstringMatches(labelText, normVal)) ||
+            normVal.includes(labelText))
         ) {
           match = true;
         }
