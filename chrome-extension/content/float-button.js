@@ -4,6 +4,10 @@
  * Floating 「自動入力」 button on supported pages (Axol-style UX).
  */
 (function initFloatingAutofillButton() {
+  if (typeof isRecruitmentAllowedUrl === 'function' && !isRecruitmentAllowedUrl(location.href)) {
+    return;
+  }
+
   const ROOT_ID = 'afp-float-autofill-root';
 
   function allowedPage() {

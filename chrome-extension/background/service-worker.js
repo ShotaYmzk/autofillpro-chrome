@@ -1,10 +1,10 @@
 'use strict';
 
+importScripts('../utils/allowed-urls.js');
+
 /**
- * Service Worker
- * - Tracks visited pages (job-hunting mypage sites)
- * - Handles extension icon badge
- * - Opens options page on first install
+ * Service worker — runs only logic that is gated by `isRecruitmentAllowedUrl`,
+ * matching manifest `content_scripts` / `host_permissions`.
  */
 
 // ──────────────────────────────────────────────
@@ -22,61 +22,30 @@ chrome.runtime.onInstalled.addListener((details) => {
 });
 
 // ──────────────────────────────────────────────
-// Page visit tracking
-// Job-hunting site detection heuristics
+// Page visit tracking (allowed recruitment URLs only)
 // ──────────────────────────────────────────────
-
-const JOB_SITE_PATTERNS = [
-  /axol\.jp/,
-  /i-web\.co\.jp/,
-  /career\.hunet\.co\.jp/,
-  /job\.rikunabi\.com/,
-  /job\.mynavi\.jp/,
-  /offerbox\.jp/,
-  /en\.wantedly\.com/,
-  /shukatsu\./,
-  /mypage\./,
-  /entry\./,
-  /recruit\./,
-  /career\./,
-  /jinji\./,
-  /saiyou\./,
-  /senkou\./,
-];
-
-function isJobSite(url) {
-  try {
-    const u = new URL(url);
-    return JOB_SITE_PATTERNS.some((re) => re.test(u.hostname + u.pathname));
-  } catch {
-    return false;
-  }
-}
-
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status !== 'complete') return;
   if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) return;
 
-  if (isJobSite(tab.url)) {
-    // Save to visited pages
-    const data = await chrome.storage.local.get(['visitedPages']);
-    const pages = data.visitedPages || [];
-    const entry = { url: tab.url, title: tab.title || tab.url, visitedAt: Date.now() };
-    const idx = pages.findIndex((p) => p.url === tab.url);
-    if (idx >= 0) {
-      pages[idx] = entry;
-    } else {
-      pages.unshift(entry);
-    }
-    await chrome.storage.local.set({ visitedPages: pages.slice(0, 100) });
-
-    // Show badge
-    chrome.action.setBadgeText({ tabId, text: '✓' });
-    chrome.action.setBadgeBackgroundColor({ tabId, color: '#22c55e' });
-  } else {
-    // Clear badge on non-job sites
+  if (!isRecruitmentAllowedUrl(tab.url)) {
     chrome.action.setBadgeText({ tabId, text: '' });
+    return;
   }
+
+  const data = await chrome.storage.local.get(['visitedPages']);
+  const pages = data.visitedPages || [];
+  const entry = { url: tab.url, title: tab.title || tab.url, visitedAt: Date.now() };
+  const idx = pages.findIndex((p) => p.url === tab.url);
+  if (idx >= 0) {
+    pages[idx] = entry;
+  } else {
+    pages.unshift(entry);
+  }
+  await chrome.storage.local.set({ visitedPages: pages.slice(0, 100) });
+
+  chrome.action.setBadgeText({ tabId, text: '✓' });
+  chrome.action.setBadgeBackgroundColor({ tabId, color: '#22c55e' });
 });
 
 // ──────────────────────────────────────────────
@@ -98,9 +67,20 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'GET_CURRENT_TAB') {
     chrome.tabs
       .query({ active: true, currentWindow: true })
-      .then(([tab]) => safeRespond({ tab }))
-      .catch(() => safeRespond({ tab: undefined }));
+      .then(([tab]) => {
+        if (tab?.url && !isRecruitmentAllowedUrl(tab.url)) {
+          safeRespond({ tab, recruitmentAllowed: false });
+          return;
+        }
+        safeRespond({ tab, recruitmentAllowed: true });
+      })
+      .catch(() => safeRespond({ tab: undefined, recruitmentAllowed: false }));
     return true;
+  }
+
+  if (sender.tab?.url && !isRecruitmentAllowedUrl(sender.tab.url)) {
+    safeRespond({ ok: false, reason: 'url-not-allowed' });
+    return false;
   }
 
   return false;

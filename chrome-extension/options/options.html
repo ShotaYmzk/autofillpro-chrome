@@ -211,18 +211,18 @@
                 <input type="checkbox" id="vacationSameAsCurrent" />
                 <span>休暇中の連絡先は現住所と同じ（フォームにチェックを入れる）</span>
               </label>
-              <p class="form-hint">チェック時は「現住所」と同じ連絡先を休暇中用にも使う場合に利用します</p>
+              <p class="form-hint">オンにすると各サイトの「現住所と同じ」にチェックを入れ、休暇中の住所欄は空のままにします。オフのときは下の「休暇中の連絡先」欄の内容を入力します。</p>
             </div>
           </div>
         </div>
 
         <div class="card">
           <div class="card__header">
-            帰省先住所
-            <span class="badge badge--secondary">実家・帰省先</span>
+            休暇中の連絡先
+            <span class="badge badge--secondary">現住所と異なる場合</span>
           </div>
           <p id="homeAddressCollapsedHint" class="form-hint home-address-collapsed-hint" hidden>
-            「現住所と同じ」のため帰省先の入力は不要です。チェックを外すと入力欄が表示されます。
+            上で「現住所と同じ」がオンなため、ここは使いません。休暇先が現住所と違う場合は上のチェックを外して入力してください。
           </p>
           <div id="homeAddressFieldsWrap" class="home-address-fields">
             <div class="form-grid form-grid--2">
@@ -454,6 +454,10 @@
             <div class="form-group form-grid--span2">
               <label class="form-label">ゼミ・研究室</label>
               <input type="text" id="seminarLab" class="form-input" placeholder="研究室名など" />
+            </div>
+            <div class="form-group form-grid--span2">
+              <label class="form-label">クラブ・サークル名</label>
+              <input type="text" id="clubCircle" class="form-input" placeholder="部活・サークル名など" />
             </div>
           </div>
         </div>

@@ -325,6 +325,7 @@ function loadProfile(id) {
     syncDepartmentSystemFromProfile(e.departmentSystem);
     setValue('schoolSearchInitial', e.schoolSearchInitial);
     setValue('seminarLab', e.seminarLab);
+    setValue('clubCircle', e.clubCircle || '');
     setValue('highSchoolPref', e.highSchoolPref);
     setValue('highSchoolSearchWord', e.highSchoolSearchWord || '');
     setValue('highSchoolName', e.highSchoolName);
@@ -420,6 +421,7 @@ function collectProfile() {
     departmentSystem: getValue('departmentSystem'),
     schoolSearchInitial: getValue('schoolSearchInitial'),
     seminarLab: getValue('seminarLab'),
+    clubCircle: getValue('clubCircle'),
     highSchoolPref: getValue('highSchoolPref'),
     highSchoolSearchWord: getValue('highSchoolSearchWord'),
     highSchoolName: getValue('highSchoolName'),

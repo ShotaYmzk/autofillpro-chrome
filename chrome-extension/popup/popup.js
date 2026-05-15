@@ -55,6 +55,14 @@ function updateStatus() {
     return;
   }
 
+  if (typeof isRecruitmentAllowedUrl === 'function' && !isRecruitmentAllowedUrl(currentTab.url)) {
+    bar.className = 'status-bar status-bar--warn';
+    text.textContent = 'この拡張は登録済みの就活サイト上でのみ利用できます';
+    document.getElementById('fillBtn').disabled = true;
+    document.getElementById('previewBtn').disabled = true;
+    return;
+  }
+
   bar.className = 'status-bar status-bar--ready';
   text.textContent = 'フォームを検出しました — 入力できます';
 }
@@ -184,13 +192,18 @@ async function doPreview() {
 }
 
 async function injectContentScripts() {
+  if (typeof isRecruitmentAllowedUrl === 'function' && !isRecruitmentAllowedUrl(currentTab.url)) {
+    throw new Error('url-not-allowed');
+  }
   // Keep in sync with manifest.json content_scripts js[] order
   await chrome.scripting.executeScript({
     target: { tabId: currentTab.id },
     files: [
+      'utils/allowed-urls.js',
       'utils/storage.js',
       'utils/furigana.js',
       'utils/postal.js',
+      'utils/vacation-contact.js',
       'content/field-matcher.js',
       'content/overlay.js',
       'content/site-adapters/generic.js',

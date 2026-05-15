@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "AutoFillPro - 就活マイページ自動入力",
   "short_name": "AutoFillPro",
-  "version": "1.2.8",
-  "description": "就活マイページへの個人情報入力を1クリックで自動化。複数プロフィール・プレビュー確認・郵便番号補完に対応。",
+  "version": "1.2.15",
+  "description": "指定した就活マイページ・エントリー画面で、保存したプロフィール情報をワンクリックで自動入力。対象サイト以外ではスクリプトを注入しません。",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -26,11 +26,21 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "*://axol.jp/zw/s/*/mypage/*",
+        "*://axol.jp/zw/s/*/entry/*",
+        "*://www.e2r.jp/ja/*/career_edu/*",
+        "*://job.mynavi.jp/28/pc/*",
+        "*://*.i-webs.jp/*",
+        "*://docomo-recruit.snar.jp/*",
+        "*://lycorp.snar.jp/mypage/*"
+      ],
       "js": [
+        "utils/allowed-urls.js",
         "utils/storage.js",
         "utils/furigana.js",
         "utils/postal.js",
+        "utils/vacation-contact.js",
         "content/field-matcher.js",
         "content/overlay.js",
         "content/site-adapters/generic.js",
@@ -44,19 +54,27 @@
       "run_at": "document_idle"
     }
   ],
-  "permissions": [
-    "storage",
-    "activeTab",
-    "scripting",
-    "tabs"
-  ],
+  "permissions": ["storage", "activeTab", "scripting", "tabs"],
   "host_permissions": [
-    "<all_urls>"
+    "*://axol.jp/zw/s/*/mypage/*",
+    "*://axol.jp/zw/s/*/entry/*",
+    "*://www.e2r.jp/ja/*/career_edu/*",
+    "*://job.mynavi.jp/28/pc/*",
+    "*://*.i-webs.jp/*",
+    "*://docomo-recruit.snar.jp/*",
+    "*://lycorp.snar.jp/mypage/*"
   ],
   "web_accessible_resources": [
     {
       "resources": ["icons/*.png"],
-      "matches": ["<all_urls>"]
+      "matches": [
+        "*://axol.jp/*",
+        "*://www.e2r.jp/*",
+        "*://job.mynavi.jp/*",
+        "*://*.i-webs.jp/*",
+        "*://docomo-recruit.snar.jp/*",
+        "*://lycorp.snar.jp/*"
+      ]
     }
   ]
 }

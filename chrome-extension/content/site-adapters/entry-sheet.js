@@ -79,16 +79,15 @@ const EntrySheetAdapter = {
 
   mapFlat(profile) {
     const flat = FieldMatcher.flattenProfile(profile);
-    const c = profile.contact || {};
     const pref = this._prefectureToSelectValue(flat.prefecture);
-    const hp = this._prefectureToSelectValue(flat.homePrefecture || c.homePrefecture);
+    let out = { ...flat, prefecture: pref || flat.prefecture };
+    if (profile.contact?.vacationSameAsCurrent) return out;
+    if (typeof VacationContact === 'undefined') return out;
+    const enriched = VacationContact.enrichFlat(out, profile.contact);
+    const hp = this._prefectureToSelectValue(enriched.prefectureVacation);
     return {
-      ...flat,
-      prefecture: pref || flat.prefecture,
-      prefectureVacation: hp || '',
-      zipVacation1: flat.homeZip1 || '',
-      zipVacation2: flat.homeZip2 || '',
-      buildingVacation: c.homeBuilding || '',
+      ...enriched,
+      prefectureVacation: hp || enriched.prefectureVacation,
     };
   },
 
@@ -154,14 +153,26 @@ const EntrySheetAdapter = {
     this._addTelRow(form, add, 'gtel', flat.homePhone1, flat.homePhone2, flat.homePhone3, 'homePhone');
 
     if (!c.vacationSameAsCurrent) {
-      this._addTelRow(form, add, 'ktel', flat.homePhone1, flat.homePhone2, flat.homePhone3, 'telVacation');
-      const vacLine = `${flat.homeCity || ''}${flat.homeAddress || ''}`.trim();
+      this._addTelRow(
+        form,
+        add,
+        'ktel',
+        flat.telVacation1,
+        flat.telVacation2,
+        flat.telVacation3,
+        'telVacation'
+      );
       const kad = form.querySelector('input[name="kadrs1"]');
-      if (kad && vacLine) add(kad, 'homeAddress', vacLine);
+      const vacLine = String(flat.vacationAddressLine || '').trim();
+      if (kad && vacLine) add(kad, 'vacationAddressLine', vacLine);
     }
 
-    const adch = form.querySelector('input[name="adch"]');
-    if (adch && c.vacationSameAsCurrent) add(adch, 'vacationSameAsCurrent', 'true');
+    const bikoaEl = form.querySelector('input[name="bikoa"]');
+    const sem = String(flat.seminarLab || '').trim();
+    if (bikoaEl && sem) add(bikoaEl, 'seminarLab', sem);
+    const bikobEl = form.querySelector('input[name="bikob"]');
+    const club = String(flat.clubCircle || '').trim();
+    if (bikobEl && club) add(bikobEl, 'clubCircle', club);
 
     const bCode = this._bunriCode(flat.declaredStream);
     if (bCode) {

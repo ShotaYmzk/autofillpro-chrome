@@ -49,6 +49,7 @@ const DEFAULT_PROFILE = {
     degree: '',         // 修士 / 博士（大学院）
     departmentSystem: '', // 学科系統（サイト検索結果や自由入力）
     seminarLab: '',     // ゼミ・研究室
+    clubCircle: '',     // クラブ・サークル名（i-webs bikob 等）
     schoolSearchInitial: '', // 学校名頭文字（空ならカナから自動）
     gradSchoolName: '',
     gradSchoolKana: '',

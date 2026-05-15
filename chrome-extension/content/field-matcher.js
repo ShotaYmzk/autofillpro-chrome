@@ -73,7 +73,7 @@ const FieldMatcher = (() => {
     },
     {
       key: 'gender',
-      aliases: ['gender','sex','性別','sei.?betsu'],
+      aliases: ['gender','sex','性別','sei.?betsu', '^sexcd$'],
       type: 'select',
     },
     {
@@ -84,19 +84,19 @@ const FieldMatcher = (() => {
     {
       key: 'dobYear',
       aliases: ['birth.*year','dob.*year','生年','誕生年','birth_year','bYear',
-                '生まれ.*年','年.*生まれ'],
+                '生まれ.*年','年.*生まれ', '^ybirth$'],
       type: 'select',
     },
     {
       key: 'dobMonth',
       aliases: ['birth.*month','dob.*month','生月','誕生月','birth_month','bMonth',
-                '月.*生まれ','生まれ.*月'],
+                '月.*生まれ','生まれ.*月', '^mbirth$'],
       type: 'select',
     },
     {
       key: 'dobDay',
       aliases: ['birth.*day','dob.*day','生日','誕生日.*日','birth_day','bDay',
-                '日.*生まれ','生まれ.*日'],
+                '日.*生まれ','生まれ.*日', '^dbirth$'],
       type: 'select',
     },
 
@@ -184,18 +184,18 @@ const FieldMatcher = (() => {
     },
     {
       key: 'zip1',
-      aliases: ['zip.*1','postal.*1','郵便番号.*1','zip1','postcode1','yuubin1'],
+      aliases: ['zip.*1','postal.*1','郵便番号.*1','zip1','postcode1','yuubin1', '^gyubin1$'],
       type: 'phone-part',
     },
     {
       key: 'zip2',
-      aliases: ['zip.*2','postal.*2','郵便番号.*2','zip2','postcode2','yuubin2'],
+      aliases: ['zip.*2','postal.*2','郵便番号.*2','zip2','postcode2','yuubin2', '^gyubin2$'],
       type: 'phone-part',
     },
     {
       key: 'prefecture',
       aliases: ['pref','prefecture','都道府県','todofuken','address.*pref',
-                'pref.*address','現住所.*都','住所.*都'],
+                'pref.*address','現住所.*都','住所.*都', '^gken$'],
       type: 'select',
     },
     {
@@ -207,20 +207,81 @@ const FieldMatcher = (() => {
     {
       key: 'address',
       aliases: ['address','addr','banchi','丁目','番地','addr.*detail',
-                '住所.*番地','address.*detail','番地.*号'],
+                '住所.*番地','address.*detail','番地.*号', '^gadrs1$'],
       type: 'text',
     },
     {
       key: 'building',
       aliases: ['building','apartment','room','apt','mansion','マンション',
-                '建物','部屋','号室','建物名','apartement'],
+                '建物','部屋','号室','建物名','apartement', '^gadrs2$'],
       type: 'text',
     },
-    // 帰省先
+    // 休暇中（現住所と異なる場合 — プロフィールの帰省先 home* を使用）
+    {
+      key: 'zipVacation1',
+      aliases: ['^kyubin1$', '^yubink_h$', '休暇.*郵便.*1', 'vacation.*zip.*1'],
+      type: 'phone-part',
+    },
+    {
+      key: 'zipVacation2',
+      aliases: ['^kyubin2$', '^yubink_l$', '休暇.*郵便.*2', 'vacation.*zip.*2'],
+      type: 'phone-part',
+    },
+    {
+      key: 'prefectureVacation',
+      aliases: ['^kken$', '^kenk$', '休暇.*都', 'vacation.*pref'],
+      type: 'select',
+    },
+    {
+      key: 'cityVacation',
+      aliases: ['^jushok1$', '休暇.*市', 'vacation.*city'],
+      type: 'text',
+    },
+    {
+      key: 'vacationAddressLine',
+      aliases: ['^kadrs1$', '休暇.*番地', 'vacation.*address.*line'],
+      type: 'text',
+    },
+    {
+      key: 'addressVacation',
+      aliases: ['^jushok2$', '休暇.*住所.*2'],
+      type: 'text',
+    },
+    {
+      key: 'buildingVacation',
+      aliases: ['^kadrs2$', '^jushok3$', '休暇.*建物', 'vacation.*building'],
+      type: 'text',
+    },
+    {
+      key: 'telVacation1',
+      aliases: ['^ktel1$', '^telk_h$', '休暇.*tel.*1'],
+      type: 'phone-part',
+    },
+    {
+      key: 'telVacation2',
+      aliases: ['^ktel2$', '^telk_m$', '休暇.*tel.*2'],
+      type: 'phone-part',
+    },
+    {
+      key: 'telVacation3',
+      aliases: ['^ktel3$', '^telk_l$', '休暇.*tel.*3'],
+      type: 'phone-part',
+    },
+    // 帰省先（汎用フォーム用ラベル。i-webs の kken/kadrs 等は上の休暇用キー）
     {
       key: 'homePrefecture',
       aliases: ['home.*pref','帰省.*都','実家.*都','home.*todofuken'],
       type: 'select',
+    },
+    {
+      key: 'homeZip1',
+      aliases: ['home.*zip.*1','home.*postal.*1','帰省.*郵便.*1','実家.*郵便.*1'],
+      type: 'phone-part',
+    },
+    {
+      key: 'homeZip2',
+      aliases: ['home.*zip.*2','home.*postal.*2','帰省.*郵便.*2','実家.*郵便.*2'],
+      type: 'phone-part',
     },
     {
       key: 'homeCity',
@@ -294,7 +355,12 @@ const FieldMatcher = (() => {
     },
     {
       key: 'seminarLab',
-      aliases: ['ゼミ','研究室','ゼミ・研究室','seminar','laboratory','labo','lab'],
+      aliases: ['ゼミ','研究室','ゼミ・研究室','seminar','laboratory','labo','lab', '^bikoa$', '\\bbikoa\\b'],
+      type: 'text',
+    },
+    {
+      key: 'clubCircle',
+      aliases: ['クラブ','サークル','サークル名','部活','^bikob$', '\\bbikob\\b'],
       type: 'text',
     },
     {
@@ -419,6 +485,20 @@ const FieldMatcher = (() => {
        強くヒットすると kmail が本体扱いになる。サブメール未設定時は normalize が kmail を破棄し空欄になる。 */
     const nm = String(el?.name || '');
     if (fieldDef.key === 'email' && /^(email2|kmail|kmail2)$/i.test(nm)) return 0;
+    /* i-webs 等: class `addresstextbox` に substring `address` / `addr` が含まれ、bikoa/bikob が住所キーに誤爆する */
+    if (/^(bikoa|bikob)$/i.test(nm)) {
+      if (fieldDef.key === 'address' || fieldDef.key === 'building' || fieldDef.key === 'city') return 0;
+    }
+    if (typeof VacationContact !== 'undefined') {
+      if (VacationContact.shouldBlockCurrentKeyOnVacationElement(el, fieldDef.key)) return 0;
+      if (VacationContact.shouldBlockVacationKeyOnCurrentElement(el, fieldDef.key)) return 0;
+      if (
+        VacationContact.isVacationField(el) &&
+        VacationContact.HOME_VACATION_PROFILE_KEYS?.has(fieldDef.key)
+      ) {
+        return 0;
+      }
+    }
 
     const signals = getElementSignals(el);
     let score = 0;
@@ -441,6 +521,8 @@ const FieldMatcher = (() => {
    */
   function isFillableVisible(el) {
     if (!el || !el.isConnected) return false;
+    /* jqTransform が select/radio を視覚的に隠してもネイティブ値は送信される — 除外しない */
+    if (el.classList && el.classList.contains('jqTransformHidden')) return true;
     let node = el;
     while (node && node.nodeType === Node.ELEMENT_NODE) {
       const style = window.getComputedStyle(node);
@@ -687,6 +769,7 @@ const FieldMatcher = (() => {
       degree,
       departmentSystem: e.departmentSystem || '',
       seminarLab: e.seminarLab || '',
+      clubCircle: e.clubCircle || '',
       schoolSearchInitial: computeSchoolSearchInitial(profile),
       gradSchoolName: e.gradSchoolName || '',
       gradSchoolKana: e.gradSchoolKana || '',
@@ -723,7 +806,13 @@ const FieldMatcher = (() => {
   function buildFillPlan(profile) {
     const elements = getFillableElements();
     const matches = matchFields(elements);
-    const flat = flattenProfile(profile);
+    let flat = flattenProfile(profile);
+    if (
+      typeof VacationContact !== 'undefined' &&
+      !VacationContact.isVacationSameAsCurrent(profile)
+    ) {
+      flat = VacationContact.enrichFlat(flat, profile.contact);
+    }
     const plan = [];
 
     for (const [el, { key }] of matches) {
@@ -734,6 +823,12 @@ const FieldMatcher = (() => {
     }
     let out = normalizeMailAssignments(plan, flat);
     out = normalizeAccountDomainPairs(out, flat);
+    /* i-webs bikoa/bikob: class addresstextbox が address に誤マッチしうる行を落とす */
+    out = out.filter((row) => {
+      const n = String(row.el?.name || '');
+      if (!/^(bikoa|bikob)$/i.test(n)) return true;
+      return row.key === 'seminarLab' || row.key === 'clubCircle';
+    });
     return out;
   }
 

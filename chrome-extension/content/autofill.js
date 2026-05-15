@@ -62,6 +62,10 @@ const AutoFill = (() => {
       plan = prioritizeAxolMailFields(plan);
     }
 
+    if (typeof VacationContact !== 'undefined' && VacationContact.applyVacationPolicy) {
+      plan = VacationContact.applyVacationPolicy(plan, profile);
+    }
+
     if (preview) {
       return { plan, filled: 0 };
     }
@@ -125,10 +129,18 @@ const AutoFill = (() => {
   }
 
   function buildOverridePlan(overrides, profile, adapter, excludeKeys = new Set()) {
-    const flat =
+    let flat =
       adapter && typeof adapter.mapFlat === 'function'
         ? adapter.mapFlat(profile)
         : FieldMatcher.flattenProfile(profile);
+    if (
+      typeof VacationContact !== 'undefined' &&
+      !VacationContact.isVacationSameAsCurrent(profile)
+    ) {
+      flat = VacationContact.enrichFlat(flat, profile.contact);
+    }
+    const vacationKeys =
+      typeof VacationContact !== 'undefined' ? VacationContact.VACATION_PROFILE_KEYS : null;
     const plan = [];
 
     const isElVisible =
@@ -138,6 +150,14 @@ const AutoFill = (() => {
 
     for (const [key, selector] of Object.entries(overrides)) {
       if (excludeKeys.has(key)) continue;
+      if (
+        vacationKeys &&
+        vacationKeys.has(key) &&
+        typeof VacationContact !== 'undefined' &&
+        VacationContact.isVacationSameAsCurrent(profile)
+      ) {
+        continue;
+      }
       const value = flat[key];
       if (!value) continue;
 
@@ -204,6 +224,17 @@ const AutoFill = (() => {
         /* 送信側が既に切断（ポップアップ閉じた等） */
       }
     };
+
+    if (
+      typeof isRecruitmentAllowedUrl === 'function' &&
+      !isRecruitmentAllowedUrl(location.href)
+    ) {
+      if (msg.type === 'AUTOFILL_FILL' || msg.type === 'AUTOFILL_PREVIEW') {
+        safeRespond({ success: false, error: 'url-not-allowed' });
+        return true;
+      }
+      return false;
+    }
 
     if (msg.type === 'AUTOFILL_FILL') {
       const { profile, settings } = msg;

@@ -237,8 +237,6 @@ const AxolAdapter = {
     const e = profile.education || {};
 
     const prefCode = this._prefectureToCode(flat.prefecture) || flat.prefecture;
-    const prefVacCode =
-      this._prefectureToCode(flat.homePrefecture) || flat.homePrefecture;
     const prefHsCode =
       this._prefectureToCode(flat.highSchoolPref) || flat.highSchoolPref;
 
@@ -258,15 +256,23 @@ const AxolAdapter = {
       ? (e.gradSchoolGradMonth || e.gradMonth || '')
       : (e.gradMonth || '');
 
+    let merged = { ...flat, prefecture: prefCode || flat.prefecture };
+    if (
+      !profile.contact?.vacationSameAsCurrent &&
+      typeof VacationContact !== 'undefined'
+    ) {
+      const enriched = VacationContact.enrichFlat(merged, profile.contact);
+      const prefVacCode =
+        this._prefectureToCode(enriched.prefectureVacation) ||
+        enriched.prefectureVacation;
+      merged = {
+        ...enriched,
+        prefectureVacation: prefVacCode || enriched.prefectureVacation,
+      };
+    }
+
     return {
-      ...flat,
-      prefecture: prefCode || flat.prefecture,
-      prefectureVacation: prefVacCode || flat.homePrefecture,
-      zipVacation1: flat.homeZip1 || '',
-      zipVacation2: flat.homeZip2 || '',
-      cityVacation: flat.homeCity || '',
-      addressVacation: flat.homeAddress || '',
-      buildingVacation: flat.homeBuilding || '',
+      ...merged,
 
       enrollYear: enrollY,
       enrollMonth: enrollM,
@@ -312,12 +318,6 @@ const AxolAdapter = {
     if (flat.emailSub1 && kmail) add(kmail, 'emailSub1', flat.emailSub1);
     if (flat.emailSub1 && kmail2) add(kmail2, 'secondaryEmailConfirm', flat.emailSub1);
 
-    // 現在の連絡先と同じ（休暇ブロック）
-    if (profile.contact?.vacationSameAsCurrent) {
-      const cb = this._findJushosameCheckbox();
-      if (cb) add(cb, 'jushosame', 'true');
-    }
-
     // 性別（name=sex の value は 1/2/3）
     const genderMap = [
       [/男性|^1$/, '1'],
@@ -360,18 +360,15 @@ const AxolAdapter = {
       if (radio) add(radio, 'degree', deg);
     }
 
-    // 休暇中の電話（telk）— 自宅電話をコピー（よくある入力）
-    const telkH = document.querySelector('input[name="telk_h"]');
-    const telkM = document.querySelector('input[name="telk_m"]');
-    const telkL = document.querySelector('input[name="telk_l"]');
-    if (
-      telkH &&
-      flat.homePhone1 &&
-      !profile.contact?.vacationSameAsCurrent
-    ) {
-      add(telkH, 'telk1', flat.homePhone1);
-      add(telkM, 'telk2', flat.homePhone2);
-      add(telkL, 'telk3', flat.homePhone3);
+    if (!profile.contact?.vacationSameAsCurrent) {
+      const telkH = document.querySelector('input[name="telk_h"]');
+      const telkM = document.querySelector('input[name="telk_m"]');
+      const telkL = document.querySelector('input[name="telk_l"]');
+      if (telkH && flat.telVacation1) {
+        add(telkH, 'telVacation1', flat.telVacation1);
+        add(telkM, 'telVacation2', flat.telVacation2);
+        add(telkL, 'telVacation3', flat.telVacation3);
+      }
     }
 
     // 高校検索ワード（Axol name=koko_word）。明示があれば優先。

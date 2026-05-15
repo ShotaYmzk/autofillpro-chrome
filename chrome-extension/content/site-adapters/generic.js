@@ -25,6 +25,106 @@ const GenericAdapter = {
    */
 
   /**
+   * 互換用 NO-OP。旧コードが &lt;script&gt; 文字列を DOM に挿入していたものを置き換える。
+   * axol.jp 等ではインライン script が CSP で禁止されるため、ここでは何もしない。
+   * 同期は _fillSelect のネイティブ setter とイベントで行う。
+   */
+  _injectPageWorldControlFill(_selectEl, _value) {},
+
+  _findJqTransformSelectWrapper(selectEl) {
+    if (!selectEl || selectEl.tagName !== 'SELECT') return null;
+    const inner = selectEl.closest('.jqTransformSelectWrapper');
+    if (inner) return inner;
+    const parent = selectEl.parentElement;
+    if (!parent) return null;
+    const kids = [...parent.children];
+    const idx = kids.indexOf(selectEl);
+    for (let i = idx - 1; i >= 0; i--) {
+      const k = kids[i];
+      if (k.classList && k.classList.contains('jqTransformSelectWrapper')) return k;
+    }
+    for (let i = idx + 1; i < kids.length; i++) {
+      const k = kids[i];
+      if (k.classList && k.classList.contains('jqTransformSelectWrapper')) return k;
+    }
+    return null;
+  },
+
+  /** i-webs / 旧 i-web 系で jqTransform が隠した select の見た目をネイティブ値に合わせる */
+  _syncJqTransformSelectLabel(selectEl) {
+    try {
+      const wrap = this._findJqTransformSelectWrapper(selectEl);
+      if (!wrap) return;
+      const span =
+        wrap.querySelector(':scope > div > span') || wrap.querySelector('div span');
+      if (!span) return;
+      const si = selectEl.selectedIndex;
+      const opt = selectEl.options[si];
+      span.innerHTML = opt ? opt.innerHTML || String(opt.textContent || '') : '-▼-';
+    } catch (_) {}
+  },
+
+  _syncJqTransformRadioGroup(radioName) {
+    if (!radioName) return;
+    const esc =
+      typeof CSS !== 'undefined' && CSS.escape
+        ? CSS.escape(String(radioName))
+        : String(radioName).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    let radios;
+    try {
+      radios = [...document.querySelectorAll(`input[type=radio][name="${esc}"]`)];
+    } catch (_) {
+      return;
+    }
+    for (const r of radios) {
+      const wrap = r.closest('.jqTransformRadioWrapper');
+      if (!wrap) continue;
+      const a = wrap.querySelector('a.jqTransformRadio');
+      if (!a) continue;
+      if (r.checked) a.classList.add('jqTransformChecked');
+      else a.classList.remove('jqTransformChecked');
+    }
+  },
+
+  _syncJqTransformCheckbox(inputEl) {
+    if (!inputEl || inputEl.type !== 'checkbox') return;
+    const wrap = inputEl.closest('.jqTransformCheckboxWrapper');
+    if (!wrap) return;
+    const a = wrap.querySelector('a.jqTransformCheckbox');
+    if (!a) return;
+    if (inputEl.checked) a.classList.add('jqTransformChecked');
+    else a.classList.remove('jqTransformChecked');
+  },
+
+  /**
+   * jqTransform ラジオ: 見た目は a 要素側が状態を持つことが多いので、可能ならアンカーをクリックしてからネイティブを確定する。
+   */
+  _setRadioCheckedWithJqTransform(radio, name) {
+    const wrap = radio.closest('.jqTransformRadioWrapper');
+    const a = wrap?.querySelector('a.jqTransformRadio');
+    if (a) {
+      try {
+        a.click();
+      } catch (_) {}
+    }
+    if (!radio.checked) {
+      const esc =
+        typeof CSS !== 'undefined' && CSS.escape
+          ? CSS.escape(String(name))
+          : String(name).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      try {
+        for (const x of document.querySelectorAll(`input[type=radio][name="${esc}"]`)) {
+          x.checked = false;
+        }
+      } catch (_) {}
+      radio.checked = true;
+    }
+    this._dispatchEvents(radio, ['focus', 'change', 'blur']);
+    this._syncJqTransformRadioGroup(name);
+    return true;
+  },
+
+  /**
    * Fill a single element with a value, dispatching all necessary events
    * so that React/Vue/Angular-based forms recognize the change.
    */
@@ -47,7 +147,8 @@ const GenericAdapter = {
         String(value).toLowerCase() === 'on' ||
         String(value) === '1';
       el.checked = truthy;
-      this._dispatchEvents(el, ['change']);
+      this._dispatchEvents(el, ['focus', 'change', 'input']);
+      this._syncJqTransformCheckbox(el);
       return true;
     }
     // text / email / tel / textarea
@@ -112,8 +213,21 @@ const GenericAdapter = {
     }
 
     if (opt) {
-      el.value = opt.value;
+      const idx = opt.index;
+      const want = opt.value;
+      const proto = window.HTMLSelectElement && window.HTMLSelectElement.prototype;
+      const valSetter = proto && Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+      if (valSetter) {
+        valSetter.call(el, want);
+      } else {
+        el.value = want;
+      }
+      el.selectedIndex = idx;
+      for (let i = 0; i < el.options.length; i++) {
+        el.options[i].selected = i === idx;
+      }
       this._dispatchEvents(el, ['focus', 'input', 'change', 'blur']);
+      this._syncJqTransformSelectLabel(el);
       return true;
     }
     return false;
@@ -153,6 +267,13 @@ const GenericAdapter = {
       }
       const wrap = radio.closest('label');
       if (wrap) return wrap.textContent || '';
+      const sib = radio.nextElementSibling;
+      if (sib && sib.tagName === 'LABEL') return sib.textContent || '';
+      const li = radio.closest('li');
+      if (li) {
+        const lab = li.querySelector('label');
+        if (lab) return lab.textContent || '';
+      }
       return '';
     };
 
@@ -168,9 +289,7 @@ const GenericAdapter = {
       const exact =
         (radioValue && radioValue === normVal) || (labelText && labelText === normVal);
       if (exact) {
-        radio.checked = true;
-        this._dispatchEvents(radio, ['focus', 'change', 'blur']);
-        return true;
+        return this._setRadioCheckedWithJqTransform(radio, name);
       }
     }
 
@@ -196,9 +315,7 @@ const GenericAdapter = {
       }
 
       if (match) {
-        radio.checked = true;
-        this._dispatchEvents(radio, ['focus', 'change', 'blur']);
-        return true;
+        return this._setRadioCheckedWithJqTransform(radio, name);
       }
     }
     return false;
