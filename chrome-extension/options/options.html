@@ -360,7 +360,20 @@
               <label class="form-label">大学所在地（都道府県）</label>
               <select id="univPref" class="form-select"><option value="">選択</option></select>
             </div>
-            <div class="form-group"></div>
+            <div class="form-group">
+              <label class="form-label">出身大学の学校区分（サイトの「出身学校検索」／i-webs）</label>
+              <select id="priorSchoolCategory" class="form-select">
+                <option value="">（在学中の区分に合わせる：未設定は「大学」）</option>
+                <option value="大学">大学</option>
+                <option value="短期大学">短期大学</option>
+                <option value="高等専門学校">高等専門学校</option>
+                <option value="専門学校">専門学校</option>
+                <option value="高等学校">高等学校</option>
+                <option value="外国大学日本校">外国大学日本校</option>
+                <option value="外国大学">外国大学</option>
+              </select>
+              <p class="form-hint">大学院在籍などで「出身大学」登録が別画面になるサイト用。空欄のときは gkbn は大学（3）を選びます。</p>
+            </div>
             <div class="form-group">
               <label class="form-label">学部名</label>
               <input type="text" id="faculty" class="form-input" placeholder="例：工学部" />

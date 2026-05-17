@@ -51,6 +51,8 @@ const DEFAULT_PROFILE = {
     seminarLab: '',     // ゼミ・研究室
     clubCircle: '',     // クラブ・サークル名（i-webs bikob 等）
     schoolSearchInitial: '', // 学校名頭文字（空ならカナから自動）
+    /** i-webs 出身学校検索ウィザード（grad-school-search）用の学校区分。未設定は大学として扱う */
+    priorSchoolCategory: '',
     gradSchoolName: '',
     gradSchoolKana: '',
     univName: '',

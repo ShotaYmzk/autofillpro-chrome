@@ -112,8 +112,9 @@ const GenericAdapter = {
         typeof CSS !== 'undefined' && CSS.escape
           ? CSS.escape(String(name))
           : String(name).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      const scope = radio.closest('form') || document;
       try {
-        for (const x of document.querySelectorAll(`input[type=radio][name="${esc}"]`)) {
+        for (const x of scope.querySelectorAll(`input[type=radio][name="${esc}"]`)) {
           x.checked = false;
         }
       } catch (_) {}
@@ -167,7 +168,7 @@ const GenericAdapter = {
     if (t === 'tel') return true;
     const n = String(el.name || '');
     if (!n) return false;
-    return /^(kttel|ktel|gtel|telk|mobiletel|hometel|home_tel|phone_no|mobile_no|fax)\d*$/i.test(
+    return /^(kttel|ktel|gtel|telg|keitai|telk|yubing|yubink|jushog|jushok|mobiletel|hometel|home_tel|phone_no|mobile_no|fax)/i.test(
       n
     );
   },

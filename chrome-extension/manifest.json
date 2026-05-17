@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "AutoFillPro - 就活マイページ自動入力",
   "short_name": "AutoFillPro",
-  "version": "1.2.15",
+  "version": "1.2.18",
   "description": "指定した就活マイページ・エントリー画面で、保存したプロフィール情報をワンクリックで自動入力。対象サイト以外ではスクリプトを注入しません。",
   "icons": {
     "16": "icons/icon16.png",

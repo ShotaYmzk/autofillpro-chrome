@@ -314,6 +314,7 @@ function loadProfile(id) {
     setValue('univName', e.univName);
     setValue('univKana', e.univKana);
     setValue('univPref', e.univPref);
+    setValue('priorSchoolCategory', e.priorSchoolCategory || '');
     setValue('faculty', e.faculty);
     setValue('dept', e.dept);
     setValue('declaredStream', e.declaredStream || '');
@@ -410,6 +411,7 @@ function collectProfile() {
     univName: getValue('univName'),
     univKana: getValue('univKana'),
     univPref: getValue('univPref'),
+    priorSchoolCategory: getValue('priorSchoolCategory'),
     faculty: getValue('faculty'),
     dept: getValue('dept'),
     declaredStream: getValue('declaredStream'),

@@ -13,11 +13,20 @@ const AutoFill = (() => {
     if (typeof AxolAdapter !== 'undefined') ADAPTERS.push(AxolAdapter);
     if (typeof IWebAdapter !== 'undefined') ADAPTERS.push(IWebAdapter);
     if (typeof EntrySheetAdapter !== 'undefined') ADAPTERS.push(EntrySheetAdapter);
+    if (typeof SchoolSearchFlowAdapter !== 'undefined')
+      ADAPTERS.push(SchoolSearchFlowAdapter);
     if (typeof GenericAdapter !== 'undefined') ADAPTERS.push(GenericAdapter);
     ADAPTERS.sort((a, b) => (b.priority || 0) - (a.priority || 0));
   }
 
+  /** ホスト名ベースの専用アダプタを DOM ヒューリスティック系より優先（Axol 等の誤マッチ防止） */
+  const SITE_HOST_ADAPTERS = ['axol', 'iweb', 'entry-sheet'];
+
   function getAdapter() {
+    for (const name of SITE_HOST_ADAPTERS) {
+      const a = ADAPTERS.find((x) => x.name === name && x.matches());
+      if (a) return a;
+    }
     return ADAPTERS.find((a) => a.matches()) || GenericAdapter;
   }
 
@@ -59,6 +68,8 @@ const AutoFill = (() => {
     plan = FieldMatcher.normalizeMailAssignments(plan, flat);
 
     if (adapter.name === 'axol') {
+      plan = dedupeAxolNamedRadios(plan);
+      plan = prioritizeAxolSchoolRadios(plan);
       plan = prioritizeAxolMailFields(plan);
     }
 
@@ -84,8 +95,16 @@ const AutoFill = (() => {
       let stepDelay = delay;
       if (adapter.name === 'axol' && el?.name === 'email2') stepDelay += 120;
       if (adapter.name === 'axol' && el?.name === 'kmail2') stepDelay += 120;
+      if (adapter.name === 'axol' && el?.name === 'degree') {
+        stepDelay += Math.max(delay * 2, 200);
+      }
       if (stepDelay > 0) await sleep(stepDelay);
-      const ok = adapter.fillElement(el, value);
+      let ok = false;
+      try {
+        ok = adapter.fillElement(el, value);
+      } catch (_) {
+        /* ページ側 onkeyup 等の例外で後続フィールドが止まらないようにする */
+      }
       if (ok) {
         filled++;
         if (
@@ -99,6 +118,14 @@ const AutoFill = (() => {
     }
 
     if (
+      adapter.name === 'axol' &&
+      typeof adapter.fillDegreeIfNeeded === 'function'
+    ) {
+      const degFilled = await adapter.fillDegreeIfNeeded(profile, { delay, highlightFilled });
+      filled += typeof degFilled === 'number' ? degFilled : 0;
+    }
+
+    if (
       typeof adapter.runSchoolSearchCascade === 'function' &&
       adapter.shouldRunSchoolCascade?.(profile)
     ) {
@@ -107,6 +134,16 @@ const AutoFill = (() => {
         highlightFilled,
       });
       filled += cascadeFilled || 0;
+    } else if (
+      adapter.name === 'axol' &&
+      typeof adapter.runFacultyDeptCascade === 'function' &&
+      adapter.shouldRunFacultyDeptCascade?.(profile)
+    ) {
+      const { filled: fdFilled } = await adapter.runFacultyDeptCascade(profile, {
+        delay,
+        highlightFilled,
+      });
+      filled += fdFilled || 0;
     }
 
     if (
@@ -190,6 +227,64 @@ const AutoFill = (() => {
 
   function sleep(ms) {
     return new Promise((r) => setTimeout(r, ms));
+  }
+
+  const AXOL_NAMED_RADIOS = new Set(['kokushi', 'kubun', 'degree', 'sex']);
+  const AXOL_RADIO_ADAPTER_KEYS = new Set(['schoolSetup', 'schoolType', 'degree', 'gender']);
+
+  /** kokushi 等の重複行を1件に（extendFillPlan 由来を優先） */
+  function dedupeAxolNamedRadios(plan) {
+    const preferred = new Map();
+    for (const row of plan) {
+      const n = row.el?.name;
+      if (!AXOL_NAMED_RADIOS.has(n) || row.el?.type !== 'radio') continue;
+      const existing = preferred.get(n);
+      if (!existing) {
+        preferred.set(n, row);
+        continue;
+      }
+      if (
+        AXOL_RADIO_ADAPTER_KEYS.has(row.key) &&
+        !AXOL_RADIO_ADAPTER_KEYS.has(existing.key)
+      ) {
+        preferred.set(n, row);
+      }
+    }
+    if (!preferred.size) return plan;
+    const emitted = new Set();
+    const out = [];
+    for (const row of plan) {
+      const n = row.el?.name;
+      if (AXOL_NAMED_RADIOS.has(n) && row.el?.type === 'radio') {
+        if (emitted.has(n)) continue;
+        emitted.add(n);
+        out.push(preferred.get(n) || row);
+        continue;
+      }
+      out.push(row);
+    }
+    return out;
+  }
+
+  /** kubun → kokushi → degree の順（大学院選択後に学位ブロックが出る） */
+  function prioritizeAxolSchoolRadios(plan) {
+    const order = { kubun: 0, kokushi: 1, degree: 2 };
+    const isSchool = (row) => row?.el?.name != null && order[row.el.name] !== undefined;
+    const schools = plan.filter(isSchool).sort((a, b) => order[a.el.name] - order[b.el.name]);
+    if (!schools.length) return plan;
+    const out = [];
+    let merged = false;
+    for (const row of plan) {
+      if (isSchool(row)) {
+        if (!merged) {
+          out.push(...schools);
+          merged = true;
+        }
+        continue;
+      }
+      out.push(row);
+    }
+    return out;
   }
 
   /** Axol: email → email2 → kmail → kmail2 の順で入れないと比較バリデが壊れやすい */

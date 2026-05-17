@@ -485,6 +485,21 @@ const FieldMatcher = (() => {
        強くヒットすると kmail が本体扱いになる。サブメール未設定時は normalize が kmail を破棄し空欄になる。 */
     const nm = String(el?.name || '');
     if (fieldDef.key === 'email' && /^(email2|kmail|kmail2)$/i.test(nm)) return 0;
+    /* カナ欄に漢字氏名キーが誤マッチしない（kana_sei の sei 部分一致等） */
+    if (
+      /^(lastName|firstName|fullName)$/.test(fieldDef.key) &&
+      (/^kana_/i.test(nm) || /カナ/.test(el?.placeholder || ''))
+    ) {
+      return 0;
+    }
+    /* Axol: kokushi 等の全ラジオに schoolSetup が付き最後の「日本国外」が勝つ — extendFillPlan に任せる */
+    if (
+      /axol\.jp/i.test(location.hostname) &&
+      /^(kokushi|kubun|degree|sex)$/i.test(nm) &&
+      /^(schoolSetup|schoolType|degree|gender)$/.test(fieldDef.key)
+    ) {
+      return 0;
+    }
     /* i-webs 等: class `addresstextbox` に substring `address` / `addr` が含まれ、bikoa/bikob が住所キーに誤爆する */
     if (/^(bikoa|bikob)$/i.test(nm)) {
       if (fieldDef.key === 'address' || fieldDef.key === 'building' || fieldDef.key === 'city') return 0;
@@ -783,6 +798,7 @@ const FieldMatcher = (() => {
       univName: e.univName || '',
       univKana: e.univKana || '',
       univPref: e.univPref || '',
+      priorSchoolCategory: (e.priorSchoolCategory || '').trim(),
       faculty: e.faculty || '',
       dept: e.dept || '',
       declaredStream: (e.declaredStream || '').trim(),

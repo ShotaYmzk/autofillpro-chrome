@@ -2,7 +2,7 @@
 
 /**
  * 複数サイトで共通しがちな「学校検索ウィザード」向け。
- * - 条件指定: form1 + gkbn / gon / dken（school-search 相当）
+ * - 条件指定: form1 + gkbn / gon / dken（school-search／grad-school-search）
  * - 学校一覧から選択: form1 + 大学名ラジオ群（change-school 等）
  * - 学部・研究科選択: faculty-select 等（研究科・学部系ラジオ）
  * - 学科・専攻 + 申告文理: dept-select 等
@@ -12,8 +12,20 @@ const SchoolSearchFlowAdapter = {
   name: 'school-search-flow',
   priority: 12,
 
+  /** Axol 登録フォーム（kubun ラジオ等）を i-webs 学校一覧と誤判定しない */
+  _isAxolMastForm() {
+    const form = this._form1();
+    if (!form) return false;
+    return !!(
+      form.querySelector('input[name="kanji_sei"]') ||
+      form.querySelector('input[name="kubun"]') ||
+      form.querySelector('input[name="initial"]')
+    );
+  },
+
   matches() {
     try {
+      if (this._isAxolMastForm()) return false;
       return (
         this._isSchoolSearchPage() ||
         this._isSchoolPickPage() ||
@@ -50,12 +62,42 @@ const SchoolSearchFlowAdapter = {
     return document.querySelector('form[name="form1"]');
   },
 
+  /** i-webs「出身大学」ウィザード継続フラグ（一覧～学科で org_action が無いページ用） */
+  _SS_UNDERGRAD: 'afp_iwebs_undergradWizard',
+
+  _iwebsOrgAction() {
+    try {
+      const f = this._form1();
+      const inp =
+        (f && f.querySelector('input[name="org_action"]')) ||
+        document.querySelector('input[name="org_action"]');
+      return String(inp?.value || '').trim();
+    } catch (_) {
+      return '';
+    }
+  },
+
+  _isUndergradSourceSession() {
+    try {
+      return sessionStorage.getItem(this._SS_UNDERGRAD) === '1';
+    } catch (_) {
+      return false;
+    }
+  },
+
+  _setUndergradWizard(on) {
+    try {
+      if (on) sessionStorage.setItem(this._SS_UNDERGRAD, '1');
+      else sessionStorage.removeItem(this._SS_UNDERGRAD);
+    } catch (_) {}
+  },
+
   _isSchoolSearchPage() {
     try {
       const hasForm = this._form1() && document.querySelector('input[type="radio"][name="gkbn"]');
       if (!hasForm) return false;
-      const org = document.querySelector('input[name="org_action"][value="school-search"]');
-      if (org) return true;
+      const org = this._iwebsOrgAction();
+      if (org === 'school-search' || org === 'grad-school-search') return true;
       return /school-search/i.test(location.pathname);
     } catch (_) {
       return false;
@@ -95,14 +137,18 @@ const SchoolSearchFlowAdapter = {
     return bestN >= minN ? best : '';
   },
 
-  /** gkbn / gon / dken 以外で最も件数が多いラジオ名（学校一覧用） */
+  /** i-webs JSOL 系: change-school で大学一覧 */
   _getSchoolListRadioName(form) {
+    if (!form) return '';
+    if (form.querySelector('input[type="radio"][name="daicd"]')) return 'daicd';
     const counts = this._radioNameCounts(form);
     return this._largestRadioName(counts, 4, 999);
   },
 
-  /** 学部・研究科一覧（件数は少なめでも可） */
+  /** 学部・研究科（i-webs: faculty-select → gkbcd） */
   _getFacultySelectRadioName(form) {
+    if (!form) return '';
+    if (form.querySelector('input[type="radio"][name="gkbcd"]')) return 'gkbcd';
     const counts = this._radioNameCounts(form);
     return this._largestRadioName(counts, 2, 40);
   },
@@ -110,13 +156,34 @@ const SchoolSearchFlowAdapter = {
   _radioLabelText(radio) {
     if (!radio) return '';
     if (radio.id) {
-      const lab = document.querySelector(`label[for="${this._escIdent(radio.id)}"]`);
-      if (lab) return (lab.textContent || '').trim();
+      try {
+        const lab = document.querySelector(`label[for="${this._escIdent(radio.id)}"]`);
+        if (lab) return (lab.textContent || '').replace(/\s+/g, ' ').trim();
+      } catch (_) {}
     }
     const wrap = radio.closest('label');
     if (wrap) return (wrap.textContent || '').replace(/\s+/g, ' ').trim();
+    /* i-webs: <li><input type=radio /><label for="radio">芝浦…</label> */
+    let sib = radio.nextElementSibling;
+    while (sib) {
+      if (sib.tagName === 'LABEL') {
+        const t = (sib.textContent || '').replace(/\s+/g, ' ').trim();
+        const junk = /^[\s●○◇◆►▶]+$/;
+        if (t && !junk.test(t)) return t;
+      }
+      /* jqTransform が a を挟む場合 */
+      if (sib.querySelector && sib.querySelector('label')) {
+        const inner = (sib.textContent || '').replace(/\s+/g, ' ').trim();
+        if (inner) return inner;
+      }
+      sib = sib.nextElementSibling;
+    }
     const li = radio.closest('li');
-    if (li) return (li.textContent || '').replace(/\s+/g, ' ').trim();
+    if (li) {
+      const labOnly = li.querySelector('label');
+      if (labOnly) return (labOnly.textContent || '').replace(/\s+/g, ' ').trim();
+      return (li.textContent || '').replace(/\s+/g, ' ').trim();
+    }
     return '';
   },
 
@@ -127,6 +194,7 @@ const SchoolSearchFlowAdapter = {
     if (!radioName) return false;
     const radios = [...form.querySelectorAll(`input[type="radio"][name="${this._escIdent(radioName)}"]`)];
     if (radios.length < 4) return false;
+    if (radioName === 'daicd' && /change-school/i.test(location.pathname)) return true;
     let eduLike = 0;
     for (const r of radios) {
       const t = this._radioLabelText(r);
@@ -137,7 +205,14 @@ const SchoolSearchFlowAdapter = {
 
   _bunriRadioName(form) {
     if (!form) return '';
-    const skip = new Set(['gkbn', 'gon', 'dken']);
+    const skip = new Set([
+      'gkbn',
+      'gon',
+      'dken',
+      'daicd',
+      'gkbcd',
+      'gkkcd',
+    ]);
     const byName = Object.create(null);
     for (const r of form.querySelectorAll('input[type="radio"]')) {
       const n = r.name;
@@ -156,6 +231,7 @@ const SchoolSearchFlowAdapter = {
 
   _getDeptSelectRadioName(form) {
     if (!form) return '';
+    if (form.querySelector('input[type="radio"][name="gkkcd"]')) return 'gkkcd';
     const bun = this._bunriRadioName(form);
     const extra = new Set(bun ? [bun] : []);
     const counts = this._radioNameCounts(form, extra);
@@ -217,6 +293,60 @@ const SchoolSearchFlowAdapter = {
     return '';
   },
 
+  /**
+   * i-webs「出身学校検索」: ページに存在する gkbn だけ選ぶ（大学院コード 1/2 を誤爆しない）
+   */
+  _gkbnValueForPriorSchool(profile, form) {
+    const e = profile.education || {};
+    const cat = String(e.priorSchoolCategory || '').trim();
+    let want = '3';
+    if (cat === '短期大学') want = '4';
+    else if (cat === '高等専門学校') want = '7';
+    else if (cat === '専門学校') want = '8';
+    else if (cat === '高等学校') want = '9';
+    else if (cat === '外国大学日本校') want = 'A';
+    else if (cat === '外国大学') want = 'B';
+    else if (cat && cat !== '大学') want = '3';
+
+    const pick = (v) => {
+      if (!form || !v) return null;
+      return form.querySelector(`input[type="radio"][name="gkbn"][value="${this._escIdent(v)}"]`);
+    };
+    if (pick(want)) return want;
+    if (want !== '3' && pick('3')) return '3';
+    const any = form?.querySelector('input[type="radio"][name="gkbn"]');
+    return any?.value ? String(any.value) : '3';
+  },
+
+  /** 在学中ウィザード: 住所は従来。出身校のみ univPref を優先 */
+  _schoolPrefectureUndergradSource(profile) {
+    return String(profile.education?.univPref || '').trim();
+  },
+
+  _firstCharKatakanaFromString(raw) {
+    let s = String(raw || '').trim();
+    if (!s) return '';
+    if (typeof FuriganaUtil !== 'undefined' && FuriganaUtil.toKatakana) {
+      s = FuriganaUtil.toKatakana(s);
+    }
+    for (const ch of s) {
+      const cp = ch.codePointAt(0);
+      if (cp >= 0x30a1 && cp <= 0x30fa) return ch;
+      if (cp >= 0x30fd && cp <= 0x30ff) return ch;
+    }
+    return '';
+  },
+
+  /** 出身大学検索ステップの頭文字: univKana → schoolSearchInitial → 大学名カナ変換 */
+  _firstKatakanaUndergradSource(profile, flat) {
+    const e = profile.education || {};
+    const fromKana = this._firstCharKatakanaFromString(e.univKana);
+    if (fromKana) return fromKana;
+    const si = String(flat.schoolSearchInitial || '').trim();
+    if (si) return this._firstCharKatakanaFromString(si);
+    return this._firstCharKatakanaFromString(e.univName);
+  },
+
   _schoolPrefectureName(profile) {
     const e = profile.education || {};
     const isGrad = /大学院/.test(e.schoolType || '');
@@ -243,12 +373,26 @@ const SchoolSearchFlowAdapter = {
     return '';
   },
 
+  /** i-webs 等は頭文字がひらがな（あ行）の value のことが多い */
+  _katakanaToHiragana(ch) {
+    if (!ch) return '';
+    const cp = ch.codePointAt(0);
+    if (cp >= 0x30a1 && cp <= 0x30f6) return String.fromCodePoint(cp - 0x60);
+    return ch;
+  },
+
   _pickGonRadio(firstKat) {
     if (!firstKat) return null;
+    const hira = this._katakanaToHiragana(firstKat);
     const radios = [...document.querySelectorAll('input[type="radio"][name="gon"]')];
     for (const r of radios) {
-      const v = r.value || '';
-      if (v.includes(firstKat)) return r;
+      const v = String(r.value || '');
+      if (v.includes(firstKat) || (hira && v.includes(hira))) return r;
+    }
+    for (const r of radios) {
+      const lab = this._radioLabelText(r);
+      if (!lab) continue;
+      if (lab.includes(firstKat) || (hira && lab.includes(hira))) return r;
     }
     return null;
   },
@@ -277,6 +421,22 @@ const SchoolSearchFlowAdapter = {
 
   _schoolNameCandidates(profile) {
     const e = profile.education || {};
+    if (this._isUndergradSourceSession()) {
+      const primary = String(e.univName || '').trim();
+      if (!primary) return [];
+      const out = [];
+      const push = (s) => {
+        const t = String(s || '').trim();
+        if (t && !out.includes(t)) out.push(t);
+      };
+      push(primary);
+      push(primary.replace(/（[^）]*）$/u, '').trim());
+      push(primary.replace(/^(国立|公立|私立)\s*/u, ''));
+      const noParen = primary.replace(/\s*（[^）]+）|\([^)]+\)\s*/gu, '').trim();
+      if (noParen && noParen !== primary) push(noParen);
+      if (!/大学$/u.test(primary) && primary.length >= 2) push(`${primary}大学`);
+      return out;
+    }
     const isGrad = /大学院/.test(e.schoolType || '');
     const primary = (
       isGrad ? e.gradSchoolName || e.univName : e.univName || e.gradSchoolName || ''
@@ -294,11 +454,15 @@ const SchoolSearchFlowAdapter = {
     const stripped = primary.replace(/大学院.*$/u, '');
     push(stripped);
     if (!/大学$/u.test(stripped) && stripped.length >= 2) push(`${stripped}大学`);
+    push(primary.replace(/^(国立|公立|私立)\s*/u, ''));
+    push(stripped.replace(/^(国立|公立|私立)\s*/u, ''));
+    const noParen = primary.replace(/\s*（[^）]+）|\([^)]+\)\s*/gu, '').trim();
+    if (noParen && noParen !== primary) push(noParen);
     return out;
   },
 
   _pickSchoolListRadio(form, radioName, candidates) {
-    const norm = (x) => this._norm(String(x)).toLowerCase();
+    const norm = (x) => this._norm(String(x));
     const radios = [
       ...form.querySelectorAll(`input[type="radio"][name="${this._escIdent(radioName)}"]`),
     ];
@@ -350,8 +514,52 @@ const SchoolSearchFlowAdapter = {
     }
   },
 
+  /** jqTransform で隠した radio は近傍の a.jqTransformRadio を叩くと見た目と同期しやすい */
+  _clickJqTransformRadio(radio) {
+    if (!radio) return false;
+    try {
+      radio.click();
+      if (radio.checked) {
+        if (typeof GenericAdapter !== 'undefined' && GenericAdapter._syncJqTransformRadioGroup) {
+          GenericAdapter._syncJqTransformRadioGroup(radio.name);
+        }
+        return true;
+      }
+    } catch (_) {}
+    const wrap = radio.closest('.jqTransformRadioWrapper') || radio.parentElement;
+    const a = wrap?.querySelector?.('a.jqTransformRadio');
+    if (a && this._safeDomClick(a)) {
+      try {
+        radio.checked = true;
+        radio.dispatchEvent(new Event('change', { bubbles: true }));
+      } catch (_) {}
+      if (typeof GenericAdapter !== 'undefined' && GenericAdapter._syncJqTransformRadioGroup) {
+        GenericAdapter._syncJqTransformRadioGroup(radio.name);
+      }
+      return true;
+    }
+    return GenericAdapter.fillElement(radio, radio.value);
+  },
+
+  _findSchoolSearchSubmit(form) {
+    if (!form) return null;
+    const nodes = [
+      ...form.querySelectorAll('input[type="submit"], input[type="image"], button[type="submit"]'),
+    ];
+    const preferRe = /検索|次へ|送信|確定/;
+    let fallback = null;
+    for (const el of nodes) {
+      const t = `${el.value || ''} ${el.alt || ''} ${el.title || ''} ${el.textContent || ''}`.trim();
+      if (preferRe.test(t)) return el;
+      if (!fallback) fallback = el;
+    }
+    return fallback;
+  },
+
   _findNextStepLink() {
-    const links = [...document.querySelectorAll('a[href*="nextpage"], a.btn_w160b, a[class*="btn_"]')];
+    const sel =
+      'a[href*="nextpage"], a.btn_w160b, a[class*="btn_"], .btn_w160 a, .btn_w160b a, p.btn_w160 a, p[class*="btn"] a';
+    const links = [...document.querySelectorAll(sel)];
     for (const a of links) {
       const href = a.getAttribute('href') || '';
       const t = (a.textContent || '').trim();
@@ -365,6 +573,21 @@ const SchoolSearchFlowAdapter = {
 
   _facultyLabelCandidates(profile) {
     const e = profile.education || {};
+    if (this._isUndergradSourceSession()) {
+      const primary = String(e.faculty || '').trim();
+      if (!primary) return [];
+      const out = [];
+      const push = (s) => {
+        const t = String(s || '').trim();
+        if (t && !out.includes(t)) out.push(t);
+      };
+      push(primary);
+      push(primary.replace(/（[^）]*）$/u, '').trim());
+      push(primary.replace(/\s+/g, ''));
+      push(primary.replace(/\s*（[^）]+）|\([^)]+\)\s*/gu, '').trim());
+      push(primary.replace(/^(学部|研究科)\s*[・･]\s*/, ''));
+      return out;
+    }
     const isGrad = /大学院/.test(e.schoolType || '');
     const primary = (
       isGrad ? e.gradFaculty || e.faculty : e.faculty || e.gradFaculty || ''
@@ -378,11 +601,27 @@ const SchoolSearchFlowAdapter = {
     push(primary);
     push(primary.replace(/（[^）]*）$/u, '').trim());
     push(primary.replace(/\s+/g, ''));
+    push(primary.replace(/\s*（[^）]+）|\([^)]+\)\s*/gu, '').trim());
+    push(primary.replace(/^(学部|研究科)\s*[・･]\s*/, ''));
     return out;
   },
 
   _deptLabelCandidates(profile) {
     const e = profile.education || {};
+    if (this._isUndergradSourceSession()) {
+      const primary = String(e.dept || '').trim();
+      if (!primary) return [];
+      const out = [];
+      const push = (s) => {
+        const t = String(s || '').trim();
+        if (t && !out.includes(t)) out.push(t);
+      };
+      push(primary);
+      push(primary.replace(/（[^）]*）$/u, '').trim());
+      push(primary.replace(/\s+/g, ''));
+      push(primary.replace(/\s*（[^）]+）|\([^)]+\)\s*/gu, '').trim());
+      return out;
+    }
     const isGrad = /大学院/.test(e.schoolType || '');
     const primary = (
       isGrad ? e.gradDept || e.dept : e.dept || e.gradDept || ''
@@ -396,6 +635,7 @@ const SchoolSearchFlowAdapter = {
     push(primary);
     push(primary.replace(/（[^）]*）$/u, '').trim());
     push(primary.replace(/\s+/g, ''));
+    push(primary.replace(/\s*（[^）]+）|\([^)]+\)\s*/gu, '').trim());
     return out;
   },
 
@@ -463,9 +703,19 @@ const SchoolSearchFlowAdapter = {
     if (!this._isSchoolSearchPage()) return [];
 
     const flat = FieldMatcher.flattenProfile(profile);
+    const form = this._form1();
+    const org = this._iwebsOrgAction();
+    const undergradSourceStep = org === 'grad-school-search';
 
-    const gkbnVal = this._gkbnValue(profile);
-    const gkbnRadio = this._radioByGkbnValue(gkbnVal);
+    if (org === 'school-search') this._setUndergradWizard(false);
+    else if (undergradSourceStep) this._setUndergradWizard(true);
+
+    const gkbnVal = undergradSourceStep
+      ? this._gkbnValueForPriorSchool(profile, form)
+      : this._gkbnValue(profile);
+    const gkbnRadio =
+      form?.querySelector(`input[type="radio"][name="gkbn"][value="${this._escIdent(gkbnVal)}"]`) ||
+      this._radioByGkbnValue(gkbnVal);
     if (gkbnRadio) add(gkbnRadio, 'schoolType', gkbnRadio.value);
 
     const dkenCb = document.querySelector('input[type="checkbox"][name="dken_search"]');
@@ -474,7 +724,11 @@ const SchoolSearchFlowAdapter = {
     } else {
       if (dkenCb && !dkenCb.checked) add(dkenCb, 'dken_search', 'true');
 
-      const prefName = this._schoolPrefectureName(profile);
+      let prefName = undergradSourceStep
+        ? this._schoolPrefectureUndergradSource(profile)
+        : this._schoolPrefectureName(profile);
+      if (undergradSourceStep && !prefName)
+        prefName = String(profile.contact?.prefecture || '').trim();
       let dkenCode = this._prefectureToCode(prefName);
       if (!dkenCode && /^[0-9]{1,2}$/.test(prefName.trim())) dkenCode = prefName.trim();
       const dkenRadio = this._radioByDkenValue(dkenCode);
@@ -482,7 +736,9 @@ const SchoolSearchFlowAdapter = {
     }
 
     if (!this._skipsInitialAndLocation(gkbnVal)) {
-      const firstKat = this._firstKatakanaForGon(flat);
+      const firstKat = undergradSourceStep
+        ? this._firstKatakanaUndergradSource(profile, flat)
+        : this._firstKatakanaForGon(flat);
       const gonRadio = this._pickGonRadio(firstKat);
       if (gonRadio) add(gonRadio, 'schoolSearchInitial', gonRadio.value);
     }
@@ -495,41 +751,26 @@ const SchoolSearchFlowAdapter = {
     if (el && el.type === 'radio') {
       const n = el.name || '';
       if (n === 'gkbn' || n === 'gon' || n === 'dken') {
-        try {
-          el.click();
-          return el.checked;
-        } catch (_) {
-          return GenericAdapter.fillElement(el, value);
-        }
+        return !!this._clickJqTransformRadio(el);
       }
       const form = el.form || this._form1();
-      if (form && this._isSchoolPickPage() && this._getSchoolListRadioName(form) === n) {
-        try {
-          el.click();
-          return el.checked;
-        } catch (_) {
-          return GenericAdapter.fillElement(el, value);
-        }
+      /* i-webs 学校選択ウィザード */
+      const schoolRn = form && this._isSchoolPickPage() ? this._getSchoolListRadioName(form) : '';
+      const facRn =
+        form && this._isFacultySelectPage() ? this._getFacultySelectRadioName(form) : '';
+      const deptRn =
+        form && this._isDeptSelectPage() ? this._getDeptSelectRadioName(form) : '';
+      const br = form && this._isDeptSelectPage() ? this._bunriRadioName(form) : '';
+
+      if (form && this._isSchoolPickPage() && schoolRn && n === schoolRn) {
+        return !!this._clickJqTransformRadio(el);
       }
-      if (form && this._isFacultySelectPage() && this._getFacultySelectRadioName(form) === n) {
-        try {
-          el.click();
-          return el.checked;
-        } catch (_) {
-          return GenericAdapter.fillElement(el, value);
-        }
+      if (form && this._isFacultySelectPage() && facRn && n === facRn) {
+        return !!this._clickJqTransformRadio(el);
       }
       if (form && this._isDeptSelectPage()) {
-        const br = this._bunriRadioName(form);
-        const dr = this._getDeptSelectRadioName(form);
-        if ((br && n === br) || (dr && n === dr)) {
-          try {
-            el.click();
-            return el.checked;
-          } catch (_) {
-            return GenericAdapter.fillElement(el, value);
-          }
-        }
+        if (deptRn && n === deptRn) return !!this._clickJqTransformRadio(el);
+        if (br && n === br) return !!this._clickJqTransformRadio(el);
       }
     }
     return GenericAdapter.fillElement(el, value);
@@ -540,13 +781,35 @@ const SchoolSearchFlowAdapter = {
    */
   async runAfterPageFill(profile, { delay = 50, plan = [] } = {}) {
     if (!this.matches()) return 0;
+    if (this._isSchoolSearchPage()) {
+      const did = plan.some((p) =>
+        ['schoolType', 'schoolSearchInitial', 'univPref', 'dken_search'].includes(p.key)
+      );
+      if (!did) return 0;
+      const gkbnOk = plan.some((p) => p.key === 'schoolType' && p.el?.checked);
+      const needGon = plan.some((p) => p.key === 'schoolSearchInitial');
+      const gonOk = !needGon || plan.some((p) => p.key === 'schoolSearchInitial' && p.el?.checked);
+      if (!gkbnOk || !gonOk) return 0;
+      await new Promise((r) => setTimeout(r, Math.max(delay, 120)));
+      await new Promise((r) => setTimeout(r, Math.max(delay, 120)));
+      const form = this._form1();
+      const nextA = this._findNextStepLink();
+      const sub = this._findSchoolSearchSubmit(form);
+      if (nextA && this._safeDomClick(nextA)) return 1;
+      if (sub && this._safeDomClick(sub)) return 1;
+      return 0;
+    }
     if (this._isDeptSelectPage()) {
       const rows = plan.filter((p) => p.key === 'deptSelectPick' || p.key === 'declaredStream');
       if (!rows.length) return 0;
       if (!rows.every((r) => r.el?.checked)) return 0;
       await new Promise((r) => setTimeout(r, Math.max(delay, 100)));
       const nextA = this._findNextStepLink();
+      const sub = this._form1()
+        ? this._findSchoolSearchSubmit(this._form1())
+        : null;
       if (nextA && this._safeDomClick(nextA)) return 1;
+      if (sub && this._safeDomClick(sub)) return 1;
       return 0;
     }
     const pickKey = this._isSchoolPickPage()
@@ -560,7 +823,10 @@ const SchoolSearchFlowAdapter = {
     if (!row?.el?.checked) return 0;
     await new Promise((r) => setTimeout(r, Math.max(delay, 100)));
     const nextA = this._findNextStepLink();
+    const form = this._form1();
+    const sub = form ? this._findSchoolSearchSubmit(form) : null;
     if (nextA && this._safeDomClick(nextA)) return 1;
+    if (sub && this._safeDomClick(sub)) return 1;
     return 0;
   },
 };
