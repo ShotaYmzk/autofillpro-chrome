@@ -320,6 +320,7 @@ function loadProfile(id) {
     setValue('declaredStream', e.declaredStream || '');
     setValue('enrollYear', e.enrollYear);
     setValue('enrollMonth', e.enrollMonth);
+    setValue('graduationStatus', e.graduationStatus || '新卒');
     setValue('gradYear', e.gradYear);
     setValue('gradMonth', e.gradMonth);
 
@@ -327,6 +328,8 @@ function loadProfile(id) {
     setValue('schoolSearchInitial', e.schoolSearchInitial);
     setValue('seminarLab', e.seminarLab);
     setValue('clubCircle', e.clubCircle || '');
+    setValue('clubCircleCategory', e.clubCircleCategory || '');
+    setValue('majorTheme', e.majorTheme || '');
     setValue('highSchoolPref', e.highSchoolPref);
     setValue('highSchoolSearchWord', e.highSchoolSearchWord || '');
     setValue('highSchoolName', e.highSchoolName);
@@ -417,6 +420,7 @@ function collectProfile() {
     declaredStream: getValue('declaredStream'),
     enrollYear: getValue('enrollYear'),
     enrollMonth: getValue('enrollMonth'),
+    graduationStatus: getValue('graduationStatus') || '新卒',
     gradYear: getValue('gradYear'),
     gradMonth: getValue('gradMonth'),
 
@@ -424,6 +428,8 @@ function collectProfile() {
     schoolSearchInitial: getValue('schoolSearchInitial'),
     seminarLab: getValue('seminarLab'),
     clubCircle: getValue('clubCircle'),
+    clubCircleCategory: getValue('clubCircleCategory'),
+    majorTheme: getValue('majorTheme'),
     highSchoolPref: getValue('highSchoolPref'),
     highSchoolSearchWord: getValue('highSchoolSearchWord'),
     highSchoolName: getValue('highSchoolName'),

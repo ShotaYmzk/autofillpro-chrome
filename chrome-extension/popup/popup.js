@@ -208,6 +208,7 @@ async function injectContentScripts() {
       'content/overlay.js',
       'content/site-adapters/generic.js',
       'content/site-adapters/axol.js',
+      'content/site-adapters/e2r-earth.js',
       'content/site-adapters/iweb.js',
       'content/site-adapters/school-search-flow.js',
       'content/site-adapters/entry-sheet.js',

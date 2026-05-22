@@ -11,6 +11,7 @@ const AutoFill = (() => {
 
   function initAdapters() {
     if (typeof AxolAdapter !== 'undefined') ADAPTERS.push(AxolAdapter);
+    if (typeof E2rEarthAdapter !== 'undefined') ADAPTERS.push(E2rEarthAdapter);
     if (typeof IWebAdapter !== 'undefined') ADAPTERS.push(IWebAdapter);
     if (typeof EntrySheetAdapter !== 'undefined') ADAPTERS.push(EntrySheetAdapter);
     if (typeof SchoolSearchFlowAdapter !== 'undefined')
@@ -19,8 +20,11 @@ const AutoFill = (() => {
     ADAPTERS.sort((a, b) => (b.priority || 0) - (a.priority || 0));
   }
 
-  /** ホスト名ベースの専用アダプタを DOM ヒューリスティック系より優先（Axol 等の誤マッチ防止） */
-  const SITE_HOST_ADAPTERS = ['axol', 'iweb', 'entry-sheet'];
+  /**
+   * 専用アダプタの優先順（左ほど先）。
+   * DOM 判定（entry-sheet / school-search-flow）を hostname 判定（iweb）より先にする。
+   */
+  const SITE_HOST_ADAPTERS = ['axol', 'e2r-earth', 'entry-sheet', 'school-search-flow', 'iweb'];
 
   function getAdapter() {
     for (const name of SITE_HOST_ADAPTERS) {
@@ -52,6 +56,10 @@ const AutoFill = (() => {
 
     const overrideEls = new Set(overridePlan.map((p) => p.el));
     plan = [...overridePlan, ...plan.filter((p) => !overrideEls.has(p.el))];
+
+    if (typeof adapter.pruneFillPlan === 'function') {
+      plan = adapter.pruneFillPlan(plan);
+    }
 
     const extra = adapter.extendFillPlan ? adapter.extendFillPlan(profile, plan) : [];
     /* 同一要素への誤マッチ行が残ると Axol の kmail がサブ宛で上書きされないため、adapter の追加で置換する */

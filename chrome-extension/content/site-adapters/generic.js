@@ -270,6 +270,18 @@ const GenericAdapter = {
       if (wrap) return wrap.textContent || '';
       const sib = radio.nextElementSibling;
       if (sib && sib.tagName === 'LABEL') return sib.textContent || '';
+      let textAfter = '';
+      let node = radio.nextSibling;
+      while (node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          textAfter += node.textContent || '';
+          node = node.nextSibling;
+          continue;
+        }
+        if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'INPUT') break;
+        break;
+      }
+      if (textAfter.trim()) return textAfter;
       const li = radio.closest('li');
       if (li) {
         const lab = li.querySelector('label');
@@ -307,9 +319,16 @@ const GenericAdapter = {
         if (
           !match &&
           labelText &&
-          ((labelText.includes(normVal) &&
-            this._radioLabelSubstringMatches(labelText, normVal)) ||
-            normVal.includes(labelText))
+          labelText.includes(normVal) &&
+          this._radioLabelSubstringMatches(labelText, normVal)
+        ) {
+          match = true;
+        }
+        if (
+          !match &&
+          labelText &&
+          normVal.includes(labelText) &&
+          normVal.indexOf(labelText) === 0
         ) {
           match = true;
         }

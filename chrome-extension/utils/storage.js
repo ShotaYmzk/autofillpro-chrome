@@ -50,6 +50,14 @@ const DEFAULT_PROFILE = {
     departmentSystem: '', // 学科系統（サイト検索結果や自由入力）
     seminarLab: '',     // ゼミ・研究室
     clubCircle: '',     // クラブ・サークル名（i-webs bikob 等）
+    /** e2R 部活・サークル区分（1〜5）。空なら clubCircle から推定 */
+    clubCircleCategory: '',
+    /** e2R 専攻テーマ。空なら学科名を使用 */
+    majorTheme: '',
+    /** e2R 留学経験（1〜5）。未設定は「留学経験はない」(5) */
+    studyAbroad: '',
+    /** e2R 障がい配慮（1=不要, 2=必要・手帳保有） */
+    disabilitySupport: '',
     schoolSearchInitial: '', // 学校名頭文字（空ならカナから自動）
     /** i-webs 出身学校検索ウィザード（grad-school-search）用の学校区分。未設定は大学として扱う */
     priorSchoolCategory: '',
@@ -72,6 +80,8 @@ const DEFAULT_PROFILE = {
     highSchoolGradMonth: '',
     enrollYear: '',
     enrollMonth: '',
+    /** e2R 等の「卒業区分」（新卒 / 既卒） */
+    graduationStatus: '新卒',
     gradYear: '',
     gradMonth: '',
     gradSchoolEnrollYear: '',

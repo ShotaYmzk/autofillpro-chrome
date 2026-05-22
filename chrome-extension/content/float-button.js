@@ -143,10 +143,30 @@
     }
   }
 
+  let syncTimer;
+  function scheduleSync() {
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(sync, 150);
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', sync);
+    document.addEventListener('DOMContentLoaded', () => {
+      sync();
+      if (document.body) {
+        new MutationObserver(scheduleSync).observe(document.body, {
+          childList: true,
+          subtree: true,
+        });
+      }
+    });
   } else {
     sync();
+    if (document.body) {
+      new MutationObserver(scheduleSync).observe(document.body, {
+        childList: true,
+        subtree: true,
+      });
+    }
   }
 
   try {

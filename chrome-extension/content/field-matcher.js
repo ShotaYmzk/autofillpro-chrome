@@ -364,6 +364,26 @@ const FieldMatcher = (() => {
       type: 'text',
     },
     {
+      key: 'clubCircleCategory',
+      aliases: ['部活・サークル','部活動','サークル区分','club.*category','^I1489$'],
+      type: 'select',
+    },
+    {
+      key: 'majorTheme',
+      aliases: ['専攻テーマ','専攻.*テーマ','major.*theme','^I46$'],
+      type: 'text',
+    },
+    {
+      key: 'studyAbroad',
+      aliases: ['留学','留学.*経験','study.*abroad','^I1228$'],
+      type: 'select',
+    },
+    {
+      key: 'disabilitySupport',
+      aliases: ['障がい','障害','配慮','手帳','^I52$'],
+      type: 'radio',
+    },
+    {
       key: 'departmentSystem',
       aliases: ['学科系統','gakka.*keitou','department.*system','系統'],
       type: 'text',
@@ -391,24 +411,24 @@ const FieldMatcher = (() => {
     {
       key: 'enrollYear',
       aliases: ['enroll.*year','enter.*year','入学.*年','入学年','nyuugaku.*year',
-                'admission.*year','入学.*年度'],
+                'admission.*year','入学.*年度', '^sgnyear$'],
       type: 'select',
     },
     {
       key: 'enrollMonth',
-      aliases: ['enroll.*month','入学.*月','nyuugaku.*month','admission.*month'],
+      aliases: ['enroll.*month','入学.*月','nyuugaku.*month','admission.*month', '^sgnmonth$'],
       type: 'select',
     },
     {
       key: 'gradMonth',
       aliases: ['grad.*month','graduate.*month','卒業.*月','sotsugyou.*month',
-                'graduation.*month','卒業予定.*月', '^smonth$'],
+                'graduation.*month','卒業予定.*月', '^smonth$', '^sgsmonth$'],
       type: 'select',
     },
     {
       key: 'gradYear',
       aliases: ['grad.*year','graduate.*year','卒業.*年','卒業年','sotsugyou.*year',
-                'graduation.*year','卒業.*年度','卒業予定.*年','^syear$'],
+                'graduation.*year','卒業.*年度','卒業予定.*年','^syear$', '^sgsyear$'],
       type: 'select',
     },
   ];
@@ -503,6 +523,24 @@ const FieldMatcher = (() => {
     /* i-webs 等: class `addresstextbox` に substring `address` / `addr` が含まれ、bikoa/bikob が住所キーに誤爆する */
     if (/^(bikoa|bikob)$/i.test(nm)) {
       if (fieldDef.key === 'address' || fieldDef.key === 'building' || fieldDef.key === 'city') return 0;
+    }
+    /* e2R: 卒業「その他」年月は runAfterPageFill で入力 */
+    if (
+      /e2r\.jp/i.test(location.hostname) &&
+      /^I50_D[12]$|^I1227_D[12]$/i.test(nm)
+    ) {
+      return 0;
+    }
+    /* e2R FirstRegist: I52 は障がいラジオ（ゼミ I45 と別） */
+    if (/e2r\.jp/i.test(location.hostname) && nm === 'I52') {
+      if (fieldDef.key === 'seminarLab') return 0;
+    }
+    /* i-webs 学科選択: gkkcd 等の全ラジオに「学科」別名がヒットする — SchoolSearchFlowAdapter に任せる */
+    if (
+      /^(dept|gradDept)$/i.test(fieldDef.key) &&
+      /^(gkkcd|gkbcd|daicd)$/i.test(nm)
+    ) {
+      return 0;
     }
     if (typeof VacationContact !== 'undefined') {
       if (VacationContact.shouldBlockCurrentKeyOnVacationElement(el, fieldDef.key)) return 0;
@@ -785,6 +823,10 @@ const FieldMatcher = (() => {
       departmentSystem: e.departmentSystem || '',
       seminarLab: e.seminarLab || '',
       clubCircle: e.clubCircle || '',
+      clubCircleCategory: e.clubCircleCategory || '',
+      majorTheme: e.majorTheme || '',
+      studyAbroad: e.studyAbroad || '',
+      disabilitySupport: e.disabilitySupport || '',
       schoolSearchInitial: computeSchoolSearchInitial(profile),
       gradSchoolName: e.gradSchoolName || '',
       gradSchoolKana: e.gradSchoolKana || '',

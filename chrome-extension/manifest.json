@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "AutoFillPro - 就活マイページ自動入力",
   "short_name": "AutoFillPro",
-  "version": "1.2.18",
+  "version": "1.2.23",
   "description": "指定した就活マイページ・エントリー画面で、保存したプロフィール情報をワンクリックで自動入力。対象サイト以外ではスクリプトを注入しません。",
   "icons": {
     "16": "icons/icon16.png",
@@ -30,10 +30,12 @@
         "*://axol.jp/zw/s/*/mypage/*",
         "*://axol.jp/zw/s/*/entry/*",
         "*://www.e2r.jp/ja/*/career_edu/*",
+        "*://www.e2r.jp/eARTH/*",
         "*://job.mynavi.jp/28/pc/*",
         "*://*.i-webs.jp/*",
         "*://docomo-recruit.snar.jp/*",
-        "*://lycorp.snar.jp/mypage/*"
+        "*://lycorp.snar.jp/mypage/*",
+        "*://suntory.saiyo.jp/2028/*"
       ],
       "js": [
         "utils/allowed-urls.js",
@@ -45,6 +47,7 @@
         "content/overlay.js",
         "content/site-adapters/generic.js",
         "content/site-adapters/axol.js",
+        "content/site-adapters/e2r-earth.js",
         "content/site-adapters/iweb.js",
         "content/site-adapters/school-search-flow.js",
         "content/site-adapters/entry-sheet.js",
@@ -59,10 +62,12 @@
     "*://axol.jp/zw/s/*/mypage/*",
     "*://axol.jp/zw/s/*/entry/*",
     "*://www.e2r.jp/ja/*/career_edu/*",
+    "*://www.e2r.jp/eARTH/*",
     "*://job.mynavi.jp/28/pc/*",
     "*://*.i-webs.jp/*",
     "*://docomo-recruit.snar.jp/*",
-    "*://lycorp.snar.jp/mypage/*"
+    "*://lycorp.snar.jp/mypage/*",
+    "*://suntory.saiyo.jp/2028/*"
   ],
   "web_accessible_resources": [
     {
@@ -73,7 +78,8 @@
         "*://job.mynavi.jp/*",
         "*://*.i-webs.jp/*",
         "*://docomo-recruit.snar.jp/*",
-        "*://lycorp.snar.jp/*"
+        "*://lycorp.snar.jp/*",
+        "*://suntory.saiyo.jp/*"
       ]
     }
   ]

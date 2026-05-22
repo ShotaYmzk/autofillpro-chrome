@@ -5,7 +5,7 @@
  * - 条件指定: form1 + gkbn / gon / dken（school-search／grad-school-search）
  * - 学校一覧から選択: form1 + 大学名ラジオ群（change-school 等）
  * - 学部・研究科選択: faculty-select 等（研究科・学部系ラジオ）
- * - 学科・専攻 + 申告文理: dept-select 等
+ * - 学科・専攻 + 申告文理: dept-select / grad-dept-select 等
  * ホスト名に依存せず DOM で判定する。
  */
 const SchoolSearchFlowAdapter = {
@@ -90,6 +90,38 @@ const SchoolSearchFlowAdapter = {
       if (on) sessionStorage.setItem(this._SS_UNDERGRAD, '1');
       else sessionStorage.removeItem(this._SS_UNDERGRAD);
     } catch (_) {}
+  },
+
+  _isGradDeptSelectPage() {
+    if (/grad-dept-select/i.test(location.pathname)) return true;
+    return this._iwebsOrgAction() === 'grad-dept-select';
+  },
+
+  _padMonth(m) {
+    const s = String(m || '').trim();
+    if (!s) return '';
+    if (/^\d{1,2}$/.test(s)) return s.padStart(2, '0');
+    return s;
+  },
+
+  /** grad-dept-select 等: 出身大学の入学・卒業年月（sgnyear/sgnmonth/sgsyear/sgsmonth） */
+  _addPriorSchoolDateFields(form, add, profile) {
+    if (!form) return;
+    const e = profile.education || {};
+    const enrollY = String(e.enrollYear || '').trim();
+    const enrollM = this._padMonth(e.enrollMonth);
+    const gradY = String(e.gradYear || '').trim();
+    const gradM = this._padMonth(e.gradMonth);
+
+    const y1 = form.querySelector('select[name="sgnyear"], select#sgnyear');
+    const m1 = form.querySelector('select[name="sgnmonth"], select#sgnmonth');
+    const y2 = form.querySelector('select[name="sgsyear"], select#sgsyear');
+    const m2 = form.querySelector('select[name="sgsmonth"], select#sgsmonth');
+
+    if (y1 && enrollY) add(y1, 'enrollYear', enrollY);
+    if (m1 && enrollM) add(m1, 'enrollMonth', enrollM);
+    if (y2 && gradY) add(y2, 'gradYear', gradY);
+    if (m2 && gradM) add(m2, 'gradMonth', gradM);
   },
 
   _isSchoolSearchPage() {
@@ -461,7 +493,7 @@ const SchoolSearchFlowAdapter = {
     return out;
   },
 
-  _pickSchoolListRadio(form, radioName, candidates) {
+  _pickSchoolListRadio(form, radioName, candidates, { strict = false } = {}) {
     const norm = (x) => this._norm(String(x));
     const radios = [
       ...form.querySelectorAll(`input[type="radio"][name="${this._escIdent(radioName)}"]`),
@@ -484,16 +516,21 @@ const SchoolSearchFlowAdapter = {
       if (hit) return hit;
     }
     for (const vn of variants) {
-      const hit = uniqHits((o) => o.text.startsWith(vn) || vn.startsWith(o.text));
+      const hit = uniqHits((o) => o.text.startsWith(vn) || (vn.startsWith(o.text) && o.text.length >= vn.length * 0.8));
       if (hit) return hit;
     }
+    if (strict) return null;
+
     for (const vn of variants) {
-      const hits = opts.filter((o) => o.text.includes(vn) || vn.includes(o.text));
+      const hits = opts.filter(
+        (o) => o.text.includes(vn) || (vn.includes(o.text) && vn.indexOf(o.text) === 0)
+      );
       if (hits.length === 1) return hits[0].el;
     }
     const sorted = [...variants].sort((a, b) => b.length - a.length);
     for (const vn of sorted) {
       const hits = opts.filter((o) => o.text.includes(vn));
+      if (hits.length === 1) return hits[0].el;
       if (hits.length >= 1) {
         hits.sort((a, b) => a.text.length - b.text.length);
         return hits[0].el;
@@ -608,7 +645,7 @@ const SchoolSearchFlowAdapter = {
 
   _deptLabelCandidates(profile) {
     const e = profile.education || {};
-    if (this._isUndergradSourceSession()) {
+    if (this._isUndergradSourceSession() || this._isGradDeptSelectPage()) {
       const primary = String(e.dept || '').trim();
       if (!primary) return [];
       const out = [];
@@ -683,11 +720,12 @@ const SchoolSearchFlowAdapter = {
       const deptRn = this._getDeptSelectRadioName(form);
       if (deptRn) {
         const candidates = this._deptLabelCandidates(profile);
-        const picked = this._pickSchoolListRadio(form, deptRn, candidates);
+        const picked = this._pickSchoolListRadio(form, deptRn, candidates, { strict: true });
         if (picked) add(picked, 'deptSelectPick', picked.value);
       }
       const bunEl = this._pickDeclaredStreamRadio(form, profile);
       if (bunEl) add(bunEl, 'declaredStream', bunEl.value);
+      this._addPriorSchoolDateFields(form, add, profile);
       return extra;
     }
 
@@ -746,6 +784,39 @@ const SchoolSearchFlowAdapter = {
     return extra;
   },
 
+  /** FieldMatcher が gkkcd 等に dept を付与した行を除去（extendFillPlan の deptSelectPick に一本化） */
+  pruneFillPlan(plan) {
+    const form = this._form1();
+    if (!form) return plan;
+
+    const wizardRadioNames = new Set(['gkbn', 'gon', 'dken']);
+    if (this._isSchoolPickPage()) {
+      const rn = this._getSchoolListRadioName(form);
+      if (rn) wizardRadioNames.add(rn);
+    }
+    if (this._isFacultySelectPage()) {
+      const rn = this._getFacultySelectRadioName(form);
+      if (rn) wizardRadioNames.add(rn);
+    }
+    if (this._isDeptSelectPage()) {
+      const rn = this._getDeptSelectRadioName(form);
+      if (rn) wizardRadioNames.add(rn);
+      const br = this._bunriRadioName(form);
+      if (br) wizardRadioNames.add(br);
+    }
+
+    if (wizardRadioNames.size <= 3 && !this._isSchoolPickPage() && !this._isFacultySelectPage() && !this._isDeptSelectPage()) {
+      return plan;
+    }
+
+    return plan.filter((row) => {
+      const n = row.el?.name;
+      if (!n || !wizardRadioNames.has(n)) return true;
+      if (row.el?.type === 'radio') return false;
+      return true;
+    });
+  },
+
   fillElement(el, value) {
     if (!this.matches()) return GenericAdapter.fillElement(el, value);
     if (el && el.type === 'radio') {
@@ -800,14 +871,20 @@ const SchoolSearchFlowAdapter = {
       return 0;
     }
     if (this._isDeptSelectPage()) {
-      const rows = plan.filter((p) => p.key === 'deptSelectPick' || p.key === 'declaredStream');
-      if (!rows.length) return 0;
-      if (!rows.every((r) => r.el?.checked)) return 0;
+      const form = this._form1();
+      const deptRow = plan.find((p) => p.key === 'deptSelectPick');
+      const didDept = deptRow?.el?.checked;
+      const didDates = plan.some(
+        (p) =>
+          ['enrollYear', 'enrollMonth', 'gradYear', 'gradMonth'].includes(p.key) &&
+          String(p.el?.value || '').trim()
+      );
+      const didBunri = plan.some((p) => p.key === 'declaredStream' && p.el?.checked);
+      if (!didDept && !didDates && !didBunri) return 0;
+      if (deptRow && !didDept) return 0;
       await new Promise((r) => setTimeout(r, Math.max(delay, 100)));
       const nextA = this._findNextStepLink();
-      const sub = this._form1()
-        ? this._findSchoolSearchSubmit(this._form1())
-        : null;
+      const sub = form ? this._findSchoolSearchSubmit(form) : null;
       if (nextA && this._safeDomClick(nextA)) return 1;
       if (sub && this._safeDomClick(sub)) return 1;
       return 0;

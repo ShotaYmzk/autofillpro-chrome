@@ -12,10 +12,12 @@ var RECRUITMENT_ALLOWED_MATCH_PATTERNS = [
   '*://axol.jp/zw/s/*/mypage/*',
   '*://axol.jp/zw/s/*/entry/*',
   '*://www.e2r.jp/ja/*/career_edu/*',
+  '*://www.e2r.jp/eARTH/*',
   '*://job.mynavi.jp/28/pc/*',
   '*://mypage.*.i-webs.jp/*',
   '*://docomo-recruit.snar.jp/*',
   '*://lycorp.snar.jp/mypage/*',
+  '*://suntory.saiyo.jp/2028/*',
 ];
 
 /**

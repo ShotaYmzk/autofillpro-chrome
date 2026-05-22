@@ -392,6 +392,16 @@
               <p class="form-hint">マイページの学科選択後の「申告文理区分」などに自動入力されます</p>
             </div>
           </div>
+          <div class="form-grid form-grid--2 mt-16">
+            <div class="form-group">
+              <label class="form-label">卒業区分（e2R 等）</label>
+              <select id="graduationStatus" class="form-select">
+                <option value="新卒">新卒</option>
+                <option value="既卒">既卒</option>
+              </select>
+              <p class="form-hint">e2R の「卒業区分」プルダウンに連動します</p>
+            </div>
+          </div>
           <div class="form-grid form-grid--4 mt-16">
             <div class="form-group">
               <label class="form-label">入学（年）</label>
@@ -410,6 +420,9 @@
               <select id="gradMonth" class="form-select month-select"></select>
             </div>
           </div>
+          <p class="form-hint" style="margin-top:8px">
+            e2R など: 3月卒業なら卒業年=2028・月=3のように入力してください。卒業予定年月のプルダウンはサイトの選択肢表示から自動判定します。
+          </p>
         </div>
 
         <div class="card">
@@ -471,6 +484,21 @@
             <div class="form-group form-grid--span2">
               <label class="form-label">クラブ・サークル名</label>
               <input type="text" id="clubCircle" class="form-input" placeholder="部活・サークル名など" />
+            </div>
+            <div class="form-group form-grid--span2">
+              <label class="form-label">部活・サークル区分（e2R 等）</label>
+              <select id="clubCircleCategory" class="form-select">
+                <option value="">（未指定・サークル名から推定）</option>
+                <option value="1">部活動（体育会系）</option>
+                <option value="2">部活動（文化系）</option>
+                <option value="3">サークル・同好会（体育会系）</option>
+                <option value="4">サークル・同好会（文化系）</option>
+                <option value="5">所属なし</option>
+              </select>
+            </div>
+            <div class="form-group form-grid--span2">
+              <label class="form-label">専攻テーマ（e2R 等）</label>
+              <input type="text" id="majorTheme" class="form-input" placeholder="空欄のときは学科名を使用" />
             </div>
           </div>
         </div>
