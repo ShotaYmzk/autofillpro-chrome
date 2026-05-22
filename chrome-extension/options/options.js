@@ -330,6 +330,7 @@ function loadProfile(id) {
     setValue('clubCircle', e.clubCircle || '');
     setValue('clubCircleCategory', e.clubCircleCategory || '');
     setValue('majorTheme', e.majorTheme || '');
+    setValue('researchTheme', e.researchTheme || '');
     setValue('highSchoolPref', e.highSchoolPref);
     setValue('highSchoolSearchWord', e.highSchoolSearchWord || '');
     setValue('highSchoolName', e.highSchoolName);
@@ -430,6 +431,7 @@ function collectProfile() {
     clubCircle: getValue('clubCircle'),
     clubCircleCategory: getValue('clubCircleCategory'),
     majorTheme: getValue('majorTheme'),
+    researchTheme: getValue('researchTheme'),
     highSchoolPref: getValue('highSchoolPref'),
     highSchoolSearchWord: getValue('highSchoolSearchWord'),
     highSchoolName: getValue('highSchoolName'),

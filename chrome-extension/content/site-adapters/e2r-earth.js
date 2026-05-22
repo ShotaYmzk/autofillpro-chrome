@@ -33,7 +33,19 @@ const E2rEarthAdapter = {
     return 'career';
   },
 
+  _i52IsResearchText(form) {
+    if (!form) return false;
+    const el = form.querySelector('input[name="I52"]');
+    return !!el && String(el.type || 'text').toLowerCase() !== 'radio';
+  },
+
+  _i52IsDisabilityRadio(form) {
+    if (!form) return false;
+    return !!form.querySelector('input[type="radio"][name="I52"]');
+  },
+
   _schema() {
+    const form = this._form();
     const v = this._variant();
     if (v === 'firstregist') {
       return {
@@ -49,15 +61,16 @@ const E2rEarthAdapter = {
         gradChangeFn: 'changeI1226',
         seminar: 'I45',
         majorTheme: 'I46',
+        researchTheme: null,
         clubCategory: 'I1489',
         studyAbroad: 'I1228',
-        disability: 'I52',
+        disability: this._i52IsDisabilityRadio(form) ? 'I52' : null,
         emailSub: 'I1225',
         emailSubConfirm: 'I1225_chk',
         vacationSame: 'I54',
       };
     }
-    return {
+    const career = {
       variant: 'career',
       gender: 'I68',
       bunri: 'I48',
@@ -68,16 +81,27 @@ const E2rEarthAdapter = {
       gradOtherMonth: 'I50_D2',
       gradOtherValue: '6',
       gradChangeFn: 'changeI13540',
-      seminar: 'I51',
-      majorTheme: null,
-      clubCategory: null,
-      clubText: 'I55',
-      studyAbroad: 'I13542',
-      disability: null,
-      emailSub: 'I10',
-      emailSubConfirm: 'I10_chk',
-      vacationSame: null,
+      seminar: form?.querySelector('input[name="I51"]') ? 'I51' : null,
+      majorTheme: form?.querySelector('input[name="I46"]') ? 'I46' : null,
+      researchTheme: this._i52IsResearchText(form) ? 'I52' : null,
+      clubCategory: form?.querySelector('select[name="I1489"]') ? 'I1489' : null,
+      clubText: form?.querySelector('input[name="I55"]') ? 'I55' : null,
+      studyAbroad: form?.querySelector('select[name="I1228"]')
+        ? 'I1228'
+        : form?.querySelector('select[name="I13542"]')
+          ? 'I13542'
+          : null,
+      disability: this._i52IsDisabilityRadio(form) ? 'I52' : null,
+      emailSub: form?.querySelector('input[name="I1225"]') ? 'I1225' : 'I10',
+      emailSubConfirm: form?.querySelector('input[name="I1225_chk"]')
+        ? 'I1225_chk'
+        : 'I10_chk',
+      vacationSame: form?.querySelector('input[name="I54"]') ? 'I54' : null,
     };
+    if (!career.seminar && form?.querySelector('input[name="I45"]')) {
+      career.seminar = 'I45';
+    }
+    return career;
   },
 
   matches() {
@@ -376,6 +400,10 @@ const E2rEarthAdapter = {
       String(flat.majorTheme || '').trim() ||
       String(flat.dept || '').trim() ||
       'なし';
+    const research =
+      String(flat.researchTheme || '').trim() ||
+      String(flat.majorTheme || '').trim() ||
+      'なし';
 
     return {
       ...flat,
@@ -388,6 +416,7 @@ const E2rEarthAdapter = {
       e2rDept: names.dept,
       e2rSeminar: seminar,
       e2rMajorTheme: major,
+      e2rResearchTheme: research,
       e2rStudyAbroad: this._studyAbroadCode(e.studyAbroad),
       e2rClubCategory: this._clubCircleCategoryCode(e.clubCircleCategory, flat.clubCircle),
       e2rDisability: this._disabilityCode(e.disabilitySupport),
@@ -464,6 +493,9 @@ const E2rEarthAdapter = {
     }
     if (schema.majorTheme) {
       overrides.majorTheme = `${p} input[name="${schema.majorTheme}"]`;
+    }
+    if (schema.researchTheme) {
+      overrides.researchTheme = `${p} input[name="${schema.researchTheme}"]`;
     }
 
     return overrides;
@@ -552,6 +584,11 @@ const E2rEarthAdapter = {
       if (mt) add(mt, 'majorTheme', flat.e2rMajorTheme);
     }
 
+    if (schema.researchTheme) {
+      const rt = form.querySelector(`input[name="${schema.researchTheme}"]`);
+      if (rt) add(rt, 'researchTheme', flat.e2rResearchTheme);
+    }
+
     if (schema.clubCategory && flat.e2rClubCategory) {
       const clubSel = form.querySelector(`select[name="${schema.clubCategory}"]`);
       if (clubSel) add(clubSel, 'clubCircleCategory', flat.e2rClubCategory);
@@ -617,7 +654,11 @@ const E2rEarthAdapter = {
         this._bunriCode(v, variant)
       );
     }
-    if (schema.disability && n === schema.disability) {
+    if (
+      schema.disability &&
+      n === schema.disability &&
+      form?.querySelector(`input[type="radio"][name="${schema.disability}"]`)
+    ) {
       return this._fillNamedRadio(form, schema.disability, value, (v) =>
         this._disabilityCode(v)
       );

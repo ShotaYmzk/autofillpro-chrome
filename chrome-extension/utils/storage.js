@@ -52,8 +52,10 @@ const DEFAULT_PROFILE = {
     clubCircle: '',     // クラブ・サークル名（i-webs bikob 等）
     /** e2R 部活・サークル区分（1〜5）。空なら clubCircle から推定 */
     clubCircleCategory: '',
-    /** e2R 専攻テーマ。空なら学科名を使用 */
+    /** e2R 専攻テーマ（FirstRegist の I46 等）。空なら学科名を使用 */
     majorTheme: '',
+    /** e2R 研究テーマ・研究室ゼミテーマ（career 系の I52 テキスト等） */
+    researchTheme: '',
     /** e2R 留学経験（1〜5）。未設定は「留学経験はない」(5) */
     studyAbroad: '',
     /** e2R 障がい配慮（1=不要, 2=必要・手帳保有） */

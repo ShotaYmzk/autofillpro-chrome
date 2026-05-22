@@ -42,6 +42,7 @@ const AutoFillOverlay = (() => {
     clubCircle: 'クラブ・サークル',
     clubCircleCategory: '部活・サークル区分',
     majorTheme: '専攻テーマ',
+    researchTheme: '研究テーマ',
     studyAbroad: '留学経験',
     disabilitySupport: '障がい配慮',
     schoolSearchInitial: '学校名頭文字',

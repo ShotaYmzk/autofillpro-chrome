@@ -374,6 +374,19 @@ const FieldMatcher = (() => {
       type: 'text',
     },
     {
+      key: 'researchTheme',
+      aliases: [
+        '研究テーマ',
+        '研究.*テーマ',
+        '研究室.*テーマ',
+        'ゼミテーマ',
+        '研究室・ゼミテーマ',
+        '研究室.*ゼミ.*テーマ',
+        'research.*theme',
+      ],
+      type: 'text',
+    },
+    {
       key: 'studyAbroad',
       aliases: ['留学','留学.*経験','study.*abroad','^I1228$'],
       type: 'select',
@@ -531,9 +544,12 @@ const FieldMatcher = (() => {
     ) {
       return 0;
     }
-    /* e2R FirstRegist: I52 は障がいラジオ（ゼミ I45 と別） */
+    /* e2R: I52 はフォームによりテキスト（研究テーマ）またはラジオ（障がい） */
     if (/e2r\.jp/i.test(location.hostname) && nm === 'I52') {
       if (fieldDef.key === 'seminarLab') return 0;
+      const isRadio = el?.type === 'radio';
+      if (fieldDef.key === 'disabilitySupport' && !isRadio) return 0;
+      if (fieldDef.key === 'researchTheme' && isRadio) return 0;
     }
     /* i-webs 学科選択: gkkcd 等の全ラジオに「学科」別名がヒットする — SchoolSearchFlowAdapter に任せる */
     if (
@@ -825,6 +841,7 @@ const FieldMatcher = (() => {
       clubCircle: e.clubCircle || '',
       clubCircleCategory: e.clubCircleCategory || '',
       majorTheme: e.majorTheme || '',
+      researchTheme: e.researchTheme || '',
       studyAbroad: e.studyAbroad || '',
       disabilitySupport: e.disabilitySupport || '',
       schoolSearchInitial: computeSchoolSearchInitial(profile),
