@@ -6,10 +6,10 @@
  */
 const VacationContact = (() => {
   const VACATION_INPUT_NAMES =
-    /^(kyubin\d|kken|kadrs\d|ktel\d|yubink_h|yubink_l|kenk|jushok\d|telk_h|telk_m|telk_l|vacation_|kyuka|kyusyoku|I17_D\d|I18|I19|I20|I21|I7_D\d)$/i;
+    /^(kyubin\d|kken|kadrs\d|ktel\d|yubink_h|yubink_l|kenk|jushok\d|telk_h|telk_m|telk_l|tbx_kyubin\d|tbx_kzip\d|tbx_kaddr\d|tbx_telk\d|ddl_kken|vacation_|kyuka|kyusyoku|I17_D\d|I18|I19|I20|I21|I7_D\d)$/i;
 
   const CURRENT_INPUT_NAMES =
-    /^(gyubin\d|gken|gadrs\d|gtel\d|kttel\d|yubing_h|yubing_l|keng|jushog\d|I12_D\d|I13|I14|I15|I16|I5_D\d|I8_D\d)$/i;
+    /^(gyubin\d|gken|gadrs\d|gtel\d|kttel\d|yubing_h|yubing_l|keng|jushog\d|tbx_yubin\d|tbx_zip\d|tbx_zipcd\d|tbx_addr\d|tbx_tel\d|ddl_ken|I12_D\d|I13|I14|I15|I16|I5_D\d|I8_D\d)$/i;
 
   const VACATION_PROFILE_KEYS = new Set([
     'zipVacation1',
@@ -62,6 +62,7 @@ const VacationContact = (() => {
     'address_same',
     'addr_same',
     'jusho_same',
+    'cbx_kflg',
     'I54',
   ];
 

@@ -520,14 +520,12 @@ const AxolAdapter = {
 
   shouldRunSchoolCascade(profile) {
     if (!this.matches() || !profile) return false;
-    const vis =
-      typeof FieldMatcher !== 'undefined' && FieldMatcher.isFillableVisible
-        ? FieldMatcher.isFillableVisible
-        : (el) => {
-            if (!el) return false;
-            const st = window.getComputedStyle(el);
-            return st.display !== 'none' && st.visibility !== 'hidden';
-          };
+    const vis = this._axolVisibilityCheck();
+    const form = this._getAxolForm();
+    const schoolSel = form && this._findSchoolSelect(form);
+    /* 大学が既に選ばれている entry 系は再検索せず学部学科カスケードへ */
+    if (schoolSel && this._schoolSelectHasValidChoice(schoolSel)) return false;
+    if (form && this._facultySelectIsReadyOnForm(form)) return false;
     const initial = document.querySelector('input[name="initial"]');
     if (!initial || !vis(initial)) return false;
     const btn = this._findSchoolSearchButton();
@@ -538,6 +536,22 @@ const AxolAdapter = {
       isGrad ? e.gradSchoolName || e.univName : e.univName || e.gradSchoolName || ''
     ).trim();
     return !!target;
+  },
+
+  _axolVisibilityCheck() {
+    return typeof FieldMatcher !== 'undefined' && FieldMatcher.isFillableVisible
+      ? FieldMatcher.isFillableVisible
+      : (el) => {
+          if (!el) return false;
+          const st = window.getComputedStyle(el);
+          return st.display !== 'none' && st.visibility !== 'hidden';
+        };
+  },
+
+  _facultySelectIsReadyOnForm(form) {
+    const vis = this._axolVisibilityCheck();
+    const facSel = this._findFacultySelect(form);
+    return !!(facSel && vis(facSel) && this._usableSelectOptions(facSel).length >= 1);
   },
 
   _facultySelectSelector() {
@@ -565,6 +579,7 @@ const AxolAdapter = {
     if (!faculty && !dept) return false;
     const form = this._getAxolForm();
     if (!form) return false;
+    if (this._facultySelectIsReadyOnForm(form)) return true;
     const schoolSel = this._findSchoolSelect(form);
     return !!(schoolSel && this._schoolSelectHasValidChoice(schoolSel));
   },
@@ -572,6 +587,7 @@ const AxolAdapter = {
   _facultyDeptLabelCandidates(profile, kind) {
     const { faculty, dept } = this._facultyDeptTargets(profile);
     const raw = (kind === 'faculty' ? faculty : dept) || '';
+    const isGrad = /大学院/.test(profile?.education?.schoolType || '');
     const out = [];
     const push = (s) => {
       const t = String(s || '').trim();
@@ -583,9 +599,62 @@ const AxolAdapter = {
     const suffixes =
       kind === 'faculty'
         ? ['学部', '研究科', '学群', '学域', 'カリキュラム']
-        : ['学科', '専攻'];
+        : ['学科', '専攻', 'コース'];
     for (const suf of suffixes) {
       if (raw.endsWith(suf)) push(raw.slice(0, -suf.length));
+    }
+    const core = raw.replace(/(学部|研究科|学科|専攻|学群|学域|コース)$/u, '').trim();
+    if (core.length >= 2) push(core);
+    if (kind === 'faculty' && isGrad) {
+      if (/学部$/u.test(raw)) push(raw.replace(/学部$/u, '研究科'));
+      if (/研究科$/u.test(raw)) push(raw.replace(/研究科$/u, '学部'));
+      if (core.length >= 2) push(`${core}研究科`);
+    }
+    return out;
+  },
+
+  _gakkeiLabelCandidates(profile) {
+    const flat = this.axolFlat(profile);
+    const out = [];
+    const push = (s) => {
+      const t = String(s || '').trim();
+      if (t && !out.includes(t)) out.push(t);
+    };
+    push(flat.departmentSystem);
+    const { dept } = this._facultyDeptTargets(profile);
+    push(dept);
+    if (dept) {
+      push(dept.replace(/（[^）]*）|\([^)]*\)/g, '').trim());
+      push(dept.replace(/[\s　]+/g, ''));
+      const core = dept.replace(/(学科|専攻|コース|系)$/u, '').trim();
+      if (core.length >= 2) push(core);
+    }
+    const d = this._norm(dept || '');
+    const keywordMap = [
+      [/情報|通信|コンピュータ|ソフト|プログラム|データ|IT/i, '情報工学系'],
+      [/機械|メカ/i, '機械系'],
+      [/電気|電子/i, '電気・電子系'],
+      [/化学|応化/i, '化学系'],
+      [/土木|建築|都市/i, '土木・建築系'],
+      [/経営|ビジネス|商学/i, '経営・管理系'],
+      [/数理|数学|統計/i, '数学・情報科学系'],
+      [/物理/i, '物理系'],
+      [/生物|生命/i, '生物系'],
+      [/材料/i, '材料系'],
+      [/国際|外国語|英語/i, '外国語系'],
+      [/文学|人文/i, '文学系'],
+      [/法学|法律/i, '文学系'],
+      [/経済/i, '経営・管理系'],
+    ];
+    for (const [re, label] of keywordMap) {
+      if (re.test(d)) push(label);
+    }
+    const isGrad = /大学院/.test(profile?.education?.schoolType || '');
+    if (isGrad) {
+      const base = [...out];
+      for (const t of base) {
+        if (t && !/^院\//u.test(t) && /系$/u.test(t)) push(`院/${t}`);
+      }
     }
     return out;
   },
@@ -653,7 +722,8 @@ const AxolAdapter = {
       if (!f) return { filled: 0, keys: filledKeys };
 
       const school = schoolSel || this._findSchoolSelect(f);
-      if (!school || !this._schoolSelectHasValidChoice(school)) {
+      const facultyReady = this._facultySelectIsReadyOnForm(f);
+      if (!facultyReady && (!school || !this._schoolSelectHasValidChoice(school))) {
         return { filled: 0, keys: filledKeys };
       }
 
@@ -676,7 +746,7 @@ const AxolAdapter = {
           ) {
             filledKeys.push('faculty');
           }
-          await sleep(Math.max(200, delay * 3));
+          await sleep(Math.max(400, delay * 4));
         }
       }
 
@@ -690,9 +760,15 @@ const AxolAdapter = {
           if (dto && this._applySelectValue(deptSel, dto.value, 'dept', highlightFilled)) {
             filledKeys.push('dept');
           }
-          await sleep(Math.max(120, delay * 2));
+          await sleep(Math.max(200, delay * 3));
         }
       }
+
+      await this._fillDepartmentSystemAfterCascade(profile, f, {
+        delay,
+        highlightFilled,
+        filledKeys,
+      });
 
       return { filled: filledKeys.length, keys: filledKeys };
     } catch (_) {
@@ -702,7 +778,6 @@ const AxolAdapter = {
 
   async runSchoolSearchCascade(profile, { delay = 50, highlightFilled = true } = {}) {
     const filledKeys = [];
-    const flat = this.axolFlat(profile);
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
     try {
@@ -743,24 +818,11 @@ const AxolAdapter = {
       });
       if (fd.keys) filledKeys.push(...fd.keys);
 
-      this._injectPageClickAutoGakkei();
-
-      await sleep(Math.max(150, delay * 2));
-
-      if (flat.departmentSystem) {
-        const g = form.querySelector('select[name="gakkei_self"]');
-        if (
-          g &&
-          typeof FieldMatcher !== 'undefined' &&
-          FieldMatcher.isFillableVisible(g)
-        ) {
-          const ok = GenericAdapter.fillElement(g, flat.departmentSystem);
-          if (ok) {
-            filledKeys.push('departmentSystem');
-            this._maybeHighlight(g, 'departmentSystem', highlightFilled);
-          }
-        }
-      }
+      await this._fillDepartmentSystemAfterCascade(profile, form, {
+        delay,
+        highlightFilled,
+        filledKeys,
+      });
 
       return { filled: filledKeys.length };
     } catch (_) {
@@ -871,15 +933,76 @@ const AxolAdapter = {
     GenericAdapter.fillElement(sel, String(value ?? ''));
   },
 
-  _injectPageClickAutoGakkei() {
-    const form = document.querySelector('form[name="form1"]') || document.querySelector('form');
-    const buttons = form ? form.querySelectorAll('input[type="button"],button') : [];
-    for (const btn of buttons) {
-      const v = (btn.value || btn.textContent || '').trim();
-      if (v.includes('学科から自動選択')) {
-        this._safeDomClick(btn);
-        return;
+  async _waitForAutoGakkeiButton(form, timeout = 5000) {
+    const vis = this._axolVisibilityCheck();
+    const start = Date.now();
+    while (Date.now() - start < timeout) {
+      const direct =
+        form.querySelector('button.jsAxolSchool_gakkei_auto:not([disabled])') ||
+        form.querySelector('.jsAxolSchool_gakkei_auto:not([disabled])');
+      if (direct && vis(direct) && !direct.disabled) return direct;
+      for (const btn of form.querySelectorAll('input[type="button"],button')) {
+        const v = (btn.value || btn.textContent || '').trim();
+        if (v.includes('学科から自動選択') && vis(btn) && !btn.disabled) return btn;
       }
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return null;
+  },
+
+  _injectPageClickAutoGakkei(form) {
+    const f = form || document.querySelector('form[name="form1"]') || document.querySelector('form');
+    if (!f) return false;
+    const btn =
+      f.querySelector('button.jsAxolSchool_gakkei_auto:not([disabled])') ||
+      f.querySelector('.jsAxolSchool_gakkei_auto:not([disabled])');
+    if (btn && !btn.disabled) return this._safeDomClick(btn);
+    for (const el of f.querySelectorAll('input[type="button"],button')) {
+      const v = (el.value || el.textContent || '').trim();
+      if (v.includes('学科から自動選択') && !el.disabled) return this._safeDomClick(el);
+    }
+    return false;
+  },
+
+  async _fillDepartmentSystemAfterCascade(
+    profile,
+    form,
+    { delay = 50, highlightFilled = true, filledKeys = [] } = {}
+  ) {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const vis = this._axolVisibilityCheck();
+    const g = form.querySelector('select[name="gakkei_self"]');
+    if (!g || !vis(g)) return;
+
+    const btn = await this._waitForAutoGakkeiButton(form, 4000);
+    if (btn) {
+      this._safeDomClick(btn);
+      await sleep(Math.max(250, delay * 3));
+    } else {
+      this._injectPageClickAutoGakkei(form);
+      await sleep(Math.max(150, delay * 2));
+    }
+
+    if (g.value && String(g.value).trim() !== '') {
+      if (!filledKeys.includes('departmentSystem')) filledKeys.push('departmentSystem');
+      this._maybeHighlight(g, 'departmentSystem', highlightFilled);
+      return;
+    }
+
+    const flat = this.axolFlat(profile);
+    const candidates = this._gakkeiLabelCandidates(profile);
+    const opt = this._pickOptionFromLabelCandidates(g, candidates);
+    if (opt && this._applySelectValue(g, opt.value, 'departmentSystem', highlightFilled)) {
+      if (!filledKeys.includes('departmentSystem')) filledKeys.push('departmentSystem');
+      return;
+    }
+    if (
+      flat.departmentSystem &&
+      GenericAdapter.fillElement(g, flat.departmentSystem) &&
+      g.value
+    ) {
+      if (!filledKeys.includes('departmentSystem')) filledKeys.push('departmentSystem');
+      this._maybeHighlight(g, 'departmentSystem', highlightFilled);
     }
   },
 

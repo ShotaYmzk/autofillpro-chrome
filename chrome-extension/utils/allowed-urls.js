@@ -11,12 +11,14 @@
 var RECRUITMENT_ALLOWED_MATCH_PATTERNS = [
   '*://axol.jp/zw/s/*/mypage/*',
   '*://axol.jp/zw/s/*/entry/*',
+  /* entry_2124220008/input など entry_<id> 形式（/entry/ ではない） */
+  '*://axol.jp/zw/s/*/*/*',
   '*://www.e2r.jp/ja/*/career_edu/*',
   '*://www.e2r.jp/eARTH/*',
   '*://job.mynavi.jp/28/pc/*',
   '*://mypage.*.i-webs.jp/*',
-  '*://docomo-recruit.snar.jp/*',
-  '*://lycorp.snar.jp/mypage/*',
+  /* sonar ATS テナント（nttdata / docomo-recruit / lycorp 等）を一括で許可 */
+  '*://*.snar.jp/*',
   '*://suntory.saiyo.jp/2028/*',
 ];
 

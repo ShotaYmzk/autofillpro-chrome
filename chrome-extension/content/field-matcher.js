@@ -22,14 +22,14 @@ const FieldMatcher = (() => {
       key: 'lastName',
       aliases: ['sei','last.?name','family.?name','last_name','lastname',
                 '姓','名字','苗字','last','sei','seimei_sei','名前.*姓','氏名.*姓',
-                '^kname1$'],
+                '^kname1$','^tbx_sei$','^tbx_name1$','^tbx_lname$'],
       type: 'text',
     },
     {
       key: 'firstName',
       aliases: ['mei','first.?name','given.?name','first_name','firstname',
                 '名','下の名前','first','mei','seimei_mei','名前.*名','氏名.*名',
-                '^kname2$'],
+                '^kname2$','^tbx_mei$','^tbx_name2$','^tbx_fname$'],
       type: 'text',
     },
     {
@@ -37,7 +37,7 @@ const FieldMatcher = (() => {
       aliases: ['sei.?kana','last.?kana','last.?furi','furigana.*sei','kana.*sei',
                 'sei.*kana','last.*kana','姓.*ふりがな','姓.*フリガナ','フリガナ.*姓',
                 'ふりがな.*姓','lastname.*kana','kana_sei','kana_last',
-                '^yname1$','セイ'],
+                '^yname1$','セイ','^tbx_seik$','^tbx_kana1$'],
       type: 'text',
     },
     {
@@ -45,7 +45,7 @@ const FieldMatcher = (() => {
       aliases: ['mei.?kana','first.?kana','first.?furi','furigana.*mei','kana.*mei',
                 'mei.*kana','first.*kana','名.*ふりがな','名.*フリガナ','フリガナ.*名',
                 'ふりがな.*名','firstname.*kana','kana_mei','kana_first',
-                '^yname2$'],
+                '^yname2$','^tbx_meik$','^tbx_kana2$'],
       type: 'text',
     },
     {
@@ -84,19 +84,19 @@ const FieldMatcher = (() => {
     {
       key: 'dobYear',
       aliases: ['birth.*year','dob.*year','生年','誕生年','birth_year','bYear',
-                '生まれ.*年','年.*生まれ', '^ybirth$'],
+                '生まれ.*年','年.*生まれ', '^ybirth$','^ddl_birthy$'],
       type: 'select',
     },
     {
       key: 'dobMonth',
       aliases: ['birth.*month','dob.*month','生月','誕生月','birth_month','bMonth',
-                '月.*生まれ','生まれ.*月', '^mbirth$'],
+                '月.*生まれ','生まれ.*月', '^mbirth$','^ddl_birthm$'],
       type: 'select',
     },
     {
       key: 'dobDay',
       aliases: ['birth.*day','dob.*day','生日','誕生日.*日','birth_day','bDay',
-                '日.*生まれ','生まれ.*日', '^dbirth$'],
+                '日.*生まれ','生まれ.*日', '^dbirth$','^ddl_birthd$'],
       type: 'select',
     },
 
@@ -104,20 +104,21 @@ const FieldMatcher = (() => {
     // メイン確認（Axol の email2 など）。normalizeMailAssignments の対象外にすること。
     {
       key: 'emailConfirm',
-      aliases: ['^email2$', 'email_confirm', 'mail_confirm', '^mail2$', '^account2$', '^domain2$'],
+      aliases: ['^email2$', 'email_confirm', 'mail_confirm', '^mail2$', '^account2$', '^domain2$',
+                '^tbx_kmail$', '^tbx_mail_r$'],
       type: 'text',
     },
     // メールアドレス2 の確認（Axol kmail2）。サブ宛とは別キーでメール並べ替えの影響を受けない。
     {
       key: 'secondaryEmailConfirm',
-      aliases: ['^kmail2$', '^account4$', '^domain4$'],
+      aliases: ['^kmail2$', '^account4$', '^domain4$','^tbx_smail_r$'],
       type: 'text',
     },
     {
       key: 'emailSub1',
       aliases: ['mail_2','email_2','sub.*mail','mail.*sub','^kmail$',
                 'サブ.*メール','予備.*メール','副.*メール','連絡用.*メール','メールアドレス.*2','第2.*メール',
-                '^account3$', '^domain3$'],
+                '^account3$', '^domain3$','^tbx_smail$'],
       type: 'text',
     },
     {
@@ -129,7 +130,7 @@ const FieldMatcher = (() => {
       key: 'email',
       aliases: ['メールアドレス','mail_address','email_address','e-mail','^mail$','email',
                 'pcmail','連絡先.*メール','mail.*address',
-                '^account1$', '^domain1$'],
+                '^account1$', '^domain1$', '^tbx_mail$'],
       type: 'text',
     },
     {
@@ -141,19 +142,19 @@ const FieldMatcher = (() => {
     {
       key: 'mobile1',
       aliases: ['mobile.*1','cell.*1','tel1.*mobile','携帯.*1$','携帯.*first',
-                'mobile_no1','mobiletel1','^kttel1$'],
+                'mobile_no1','mobiletel1','^kttel1$','^tbx_ktel1$','^tbx_keitai1$'],
       type: 'phone-part',
     },
     {
       key: 'mobile2',
       aliases: ['mobile.*2','cell.*2','tel2.*mobile','携帯.*2$','携帯.*second',
-                'mobile_no2','mobiletel2','^kttel2$'],
+                'mobile_no2','mobiletel2','^kttel2$','^tbx_ktel2$','^tbx_keitai2$'],
       type: 'phone-part',
     },
     {
       key: 'mobile3',
       aliases: ['mobile.*3','cell.*3','tel3.*mobile','携帯.*3$','携帯.*third',
-                'mobile_no3','mobiletel3','^kttel3$'],
+                'mobile_no3','mobiletel3','^kttel3$','^tbx_ktel3$','^tbx_keitai3$'],
       type: 'phone-part',
     },
     {
@@ -164,17 +165,17 @@ const FieldMatcher = (() => {
     },
     {
       key: 'homePhone1',
-      aliases: ['home.*tel.*1','tel1.*home','自宅.*tel.*1','hometel1','home_tel1','^gtel1$'],
+      aliases: ['home.*tel.*1','tel1.*home','自宅.*tel.*1','hometel1','home_tel1','^gtel1$','^tbx_tel1$','^tbx_tel11$'],
       type: 'phone-part',
     },
     {
       key: 'homePhone2',
-      aliases: ['home.*tel.*2','tel2.*home','自宅.*tel.*2','hometel2','home_tel2','^gtel2$'],
+      aliases: ['home.*tel.*2','tel2.*home','自宅.*tel.*2','hometel2','home_tel2','^gtel2$','^tbx_tel2$','^tbx_tel12$'],
       type: 'phone-part',
     },
     {
       key: 'homePhone3',
-      aliases: ['home.*tel.*3','tel3.*home','自宅.*tel.*3','hometel3','home_tel3','^gtel3$'],
+      aliases: ['home.*tel.*3','tel3.*home','自宅.*tel.*3','hometel3','home_tel3','^gtel3$','^tbx_tel3$','^tbx_tel13$'],
       type: 'phone-part',
     },
     {
@@ -184,62 +185,66 @@ const FieldMatcher = (() => {
     },
     {
       key: 'zip1',
-      aliases: ['zip.*1','postal.*1','郵便番号.*1','zip1','postcode1','yuubin1', '^gyubin1$'],
+      aliases: ['zip.*1','postal.*1','郵便番号.*1','zip1','postcode1','yuubin1', '^gyubin1$',
+                '^tbx_yubin1$','^tbx_zip1$','^tbx_zipcd1$'],
       type: 'phone-part',
     },
     {
       key: 'zip2',
-      aliases: ['zip.*2','postal.*2','郵便番号.*2','zip2','postcode2','yuubin2', '^gyubin2$'],
+      aliases: ['zip.*2','postal.*2','郵便番号.*2','zip2','postcode2','yuubin2', '^gyubin2$',
+                '^tbx_yubin2$','^tbx_zip2$','^tbx_zipcd2$'],
       type: 'phone-part',
     },
     {
       key: 'prefecture',
       aliases: ['pref','prefecture','都道府県','todofuken','address.*pref',
-                'pref.*address','現住所.*都','住所.*都', '^gken$'],
+                'pref.*address','現住所.*都','住所.*都', '^gken$','^ddl_ken$'],
       type: 'select',
     },
     {
       key: 'city',
       aliases: ['city','ward','town','市区町村','shiku','shichoson','address.*city',
-                '市町村','区','現住所.*市','住所.*市'],
+                '市町村','区','現住所.*市','住所.*市','^tbx_addr1$'],
       type: 'text',
     },
     {
       key: 'address',
       aliases: ['address','addr','banchi','丁目','番地','addr.*detail',
-                '住所.*番地','address.*detail','番地.*号', '^gadrs1$'],
+                '住所.*番地','address.*detail','番地.*号', '^gadrs1$','^tbx_addr2$'],
       type: 'text',
     },
     {
       key: 'building',
       aliases: ['building','apartment','room','apt','mansion','マンション',
-                '建物','部屋','号室','建物名','apartement', '^gadrs2$'],
+                '建物','部屋','号室','建物名','apartement', '^gadrs2$','^tbx_addr3$'],
       type: 'text',
     },
     // 休暇中（現住所と異なる場合 — プロフィールの帰省先 home* を使用）
     {
       key: 'zipVacation1',
-      aliases: ['^kyubin1$', '^yubink_h$', '休暇.*郵便.*1', 'vacation.*zip.*1'],
+      aliases: ['^kyubin1$', '^yubink_h$', '休暇.*郵便.*1', 'vacation.*zip.*1',
+                '^tbx_kyubin1$','^tbx_kzip1$'],
       type: 'phone-part',
     },
     {
       key: 'zipVacation2',
-      aliases: ['^kyubin2$', '^yubink_l$', '休暇.*郵便.*2', 'vacation.*zip.*2'],
+      aliases: ['^kyubin2$', '^yubink_l$', '休暇.*郵便.*2', 'vacation.*zip.*2',
+                '^tbx_kyubin2$','^tbx_kzip2$'],
       type: 'phone-part',
     },
     {
       key: 'prefectureVacation',
-      aliases: ['^kken$', '^kenk$', '休暇.*都', 'vacation.*pref'],
+      aliases: ['^kken$', '^kenk$', '休暇.*都', 'vacation.*pref', '^ddl_kken$'],
       type: 'select',
     },
     {
       key: 'cityVacation',
-      aliases: ['^jushok1$', '休暇.*市', 'vacation.*city'],
+      aliases: ['^jushok1$', '休暇.*市', 'vacation.*city', '^tbx_kaddr1$'],
       type: 'text',
     },
     {
       key: 'vacationAddressLine',
-      aliases: ['^kadrs1$', '休暇.*番地', 'vacation.*address.*line'],
+      aliases: ['^kadrs1$', '休暇.*番地', 'vacation.*address.*line', '^tbx_kaddr2$'],
       type: 'text',
     },
     {
@@ -249,22 +254,22 @@ const FieldMatcher = (() => {
     },
     {
       key: 'buildingVacation',
-      aliases: ['^kadrs2$', '^jushok3$', '休暇.*建物', 'vacation.*building'],
+      aliases: ['^kadrs2$', '^jushok3$', '休暇.*建物', 'vacation.*building', '^tbx_kaddr3$'],
       type: 'text',
     },
     {
       key: 'telVacation1',
-      aliases: ['^ktel1$', '^telk_h$', '休暇.*tel.*1'],
+      aliases: ['^ktel1$', '^telk_h$', '休暇.*tel.*1', '^tbx_telk1$'],
       type: 'phone-part',
     },
     {
       key: 'telVacation2',
-      aliases: ['^ktel2$', '^telk_m$', '休暇.*tel.*2'],
+      aliases: ['^ktel2$', '^telk_m$', '休暇.*tel.*2', '^tbx_telk2$'],
       type: 'phone-part',
     },
     {
       key: 'telVacation3',
-      aliases: ['^ktel3$', '^telk_l$', '休暇.*tel.*3'],
+      aliases: ['^ktel3$', '^telk_l$', '休暇.*tel.*3', '^tbx_telk3$'],
       type: 'phone-part',
     },
     // 帰省先（汎用フォーム用ラベル。i-webs の kken/kadrs 等は上の休暇用キー）
@@ -435,13 +440,15 @@ const FieldMatcher = (() => {
     {
       key: 'gradMonth',
       aliases: ['grad.*month','graduate.*month','卒業.*月','sotsugyou.*month',
-                'graduation.*month','卒業予定.*月', '^smonth$', '^sgsmonth$'],
+                'graduation.*month','卒業予定.*月', '^smonth$', '^sgsmonth$',
+                '^ddl_sotsuym$'],
       type: 'select',
     },
     {
       key: 'gradYear',
       aliases: ['grad.*year','graduate.*year','卒業.*年','卒業年','sotsugyou.*year',
-                'graduation.*year','卒業.*年度','卒業予定.*年','^syear$', '^sgsyear$'],
+                'graduation.*year','卒業.*年度','卒業予定.*年','^syear$', '^sgsyear$',
+                '^ddl_sotsuyy$'],
       type: 'select',
     },
   ];
@@ -558,6 +565,14 @@ const FieldMatcher = (() => {
     ) {
       return 0;
     }
+    /* sonar ATS: 3分割電話欄に結合番号 mobile / homePhone が誤マッチ — SnarAdapter.extendFillPlan に任せる */
+    if (/\.snar\.jp$/i.test(location.hostname)) {
+      if (fieldDef.key === 'mobile' && /^tbx_(k?tel|keitai)\d$/i.test(nm)) return 0;
+      if (fieldDef.key === 'homePhone' && /^tbx_tel\d/i.test(nm) && !/^tbx_telk/i.test(nm)) return 0;
+      if (fieldDef.key === 'email' && /^tbx_mail_r$/i.test(nm)) return 0;
+      if (fieldDef.key === 'emailSub1' && /^tbx_smail_r$/i.test(nm)) return 0;
+      if (fieldDef.key === 'emailConfirm' && nm === 'tbx_kmail') return 0;
+    }
     if (typeof VacationContact !== 'undefined') {
       if (VacationContact.shouldBlockCurrentKeyOnVacationElement(el, fieldDef.key)) return 0;
       if (VacationContact.shouldBlockVacationKeyOnCurrentElement(el, fieldDef.key)) return 0;
@@ -568,7 +583,6 @@ const FieldMatcher = (() => {
         return 0;
       }
     }
-
     const signals = getElementSignals(el);
     let score = 0;
 

@@ -168,7 +168,7 @@ const GenericAdapter = {
     if (t === 'tel') return true;
     const n = String(el.name || '');
     if (!n) return false;
-    return /^(kttel|ktel|gtel|telg|keitai|telk|yubing|yubink|jushog|jushok|mobiletel|hometel|home_tel|phone_no|mobile_no|fax)/i.test(
+    /^(kttel|ktel|gtel|telg|keitai|telk|yubing|yubink|jushog|jushok|tbx_tel|tbx_ktel|tbx_keitai|tbx_yubin|tbx_kyubin|tbx_kzip|mobiletel|hometel|home_tel|phone_no|mobile_no|fax)/i.test(
       n
     );
   },

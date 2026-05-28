@@ -13,6 +13,7 @@ const AutoFill = (() => {
     if (typeof AxolAdapter !== 'undefined') ADAPTERS.push(AxolAdapter);
     if (typeof E2rEarthAdapter !== 'undefined') ADAPTERS.push(E2rEarthAdapter);
     if (typeof IWebAdapter !== 'undefined') ADAPTERS.push(IWebAdapter);
+    if (typeof SnarAdapter !== 'undefined') ADAPTERS.push(SnarAdapter);
     if (typeof EntrySheetAdapter !== 'undefined') ADAPTERS.push(EntrySheetAdapter);
     if (typeof SchoolSearchFlowAdapter !== 'undefined')
       ADAPTERS.push(SchoolSearchFlowAdapter);
@@ -24,7 +25,7 @@ const AutoFill = (() => {
    * 専用アダプタの優先順（左ほど先）。
    * DOM 判定（entry-sheet / school-search-flow）を hostname 判定（iweb）より先にする。
    */
-  const SITE_HOST_ADAPTERS = ['axol', 'e2r-earth', 'entry-sheet', 'school-search-flow', 'iweb'];
+  const SITE_HOST_ADAPTERS = ['axol', 'e2r-earth', 'entry-sheet', 'school-search-flow', 'snar', 'iweb'];
 
   function getAdapter() {
     for (const name of SITE_HOST_ADAPTERS) {
