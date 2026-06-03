@@ -44,9 +44,22 @@ const E2rEarthAdapter = {
     return !!form.querySelector('input[type="radio"][name="I52"]');
   },
 
+  /** メールアドレス2（サブ）。企業・シートにより I2977 / I1225 / I10 等に分かれる */
+  _resolveEmailSubNames(form) {
+    if (!form) return { sub: null, confirm: null };
+    for (const sub of ['I2977', 'I1225', 'I10']) {
+      const inp = form.querySelector(`input[name="${sub}"]`);
+      if (!inp || String(inp.type || 'text').toLowerCase() === 'hidden') continue;
+      const confirm = `${sub}_chk`;
+      if (form.querySelector(`input[name="${confirm}"]`)) return { sub, confirm };
+    }
+    return { sub: null, confirm: null };
+  },
+
   _schema() {
     const form = this._form();
     const v = this._variant();
+    const emailSubNames = this._resolveEmailSubNames(form);
     if (v === 'firstregist') {
       return {
         variant: 'firstregist',
@@ -65,8 +78,8 @@ const E2rEarthAdapter = {
         clubCategory: 'I1489',
         studyAbroad: 'I1228',
         disability: this._i52IsDisabilityRadio(form) ? 'I52' : null,
-        emailSub: 'I1225',
-        emailSubConfirm: 'I1225_chk',
+        emailSub: emailSubNames.sub,
+        emailSubConfirm: emailSubNames.confirm,
         vacationSame: 'I54',
       };
     }
@@ -92,10 +105,8 @@ const E2rEarthAdapter = {
           ? 'I13542'
           : null,
       disability: this._i52IsDisabilityRadio(form) ? 'I52' : null,
-      emailSub: form?.querySelector('input[name="I1225"]') ? 'I1225' : 'I10',
-      emailSubConfirm: form?.querySelector('input[name="I1225_chk"]')
-        ? 'I1225_chk'
-        : 'I10_chk',
+      emailSub: emailSubNames.sub,
+      emailSubConfirm: emailSubNames.confirm,
       vacationSame: form?.querySelector('input[name="I54"]') ? 'I54' : null,
     };
     if (!career.seminar && form?.querySelector('input[name="I45"]')) {

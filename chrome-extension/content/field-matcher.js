@@ -117,7 +117,7 @@ const FieldMatcher = (() => {
     {
       key: 'emailSub1',
       aliases: ['mail_2','email_2','sub.*mail','mail.*sub','^kmail$',
-                'サブ.*メール','予備.*メール','副.*メール','連絡用.*メール','メールアドレス.*2','第2.*メール',
+                'サブ.*メール','予備.*メール','副.*メール','連絡用.*メール','メールアドレス.*[2２②]','第2.*メール',
                 '^account3$', '^domain3$','^tbx_smail$'],
       type: 'text',
     },
@@ -461,7 +461,8 @@ const FieldMatcher = (() => {
    * Extract all text signals from an element:
    * name, id, placeholder, aria-label, associated <label>, data-* attrs
    */
-  function getElementSignals(el) {
+  function getElementSignals(el, options = {}) {
+    const relaxed = !!options.relaxed;
     const signals = [];
     const push = (v) => { if (v) signals.push(v.toLowerCase()); };
 
@@ -514,13 +515,28 @@ const FieldMatcher = (() => {
       }
     }
 
+    /* 未登録サイト向け: テーブル左列の th/td ラベル（就活 ES で多い） */
+    if (relaxed) {
+      const tr = el.closest('tr');
+      if (tr) {
+        for (const cell of tr.querySelectorAll('th, td')) {
+          if (!cell.contains(el)) push(cell.textContent);
+        }
+      }
+      const row = el.closest('[class*="row"], .form-group, .form_row, li');
+      if (row) {
+        const head = row.querySelector('th, label, .label, dt, [class*="label"]');
+        if (head && !head.contains(el)) push(head.textContent);
+      }
+    }
+
     return signals;
   }
 
   /**
    * Score a single element against a field definition
    */
-  function scoreElement(el, fieldDef) {
+  function scoreElement(el, fieldDef, relaxed = false) {
     /* Axol: 「メールアドレス２」のラベルにも「メールアドレス」が含まれ、別名が多い key:email に
        強くヒットすると kmail が本体扱いになる。サブメール未設定時は normalize が kmail を破棄し空欄になる。 */
     const nm = String(el?.name || '');
@@ -550,6 +566,16 @@ const FieldMatcher = (() => {
       /^I50_D[12]$|^I1227_D[12]$/i.test(nm)
     ) {
       return 0;
+    }
+    /* e2R: サブメール欄（I2977 等）に key:email が付くとメインと同じ値になる */
+    if (/e2r\.jp/i.test(location.hostname)) {
+      if (fieldDef.key === 'email' && /^(I2977|I1225|I10)$/i.test(nm)) return 0;
+      if (fieldDef.key === 'emailConfirm' && /^(I2977_chk|I1225_chk|I10_chk)$/i.test(nm)) return 0;
+      if (fieldDef.key === 'email' || fieldDef.key === 'emailConfirm') {
+        const tr = el?.closest?.('tr');
+        const th = tr?.querySelector?.('th');
+        if (th && /メールアドレス\s*[2２②]/.test(String(th.textContent || ''))) return 0;
+      }
     }
     /* e2R: I52 はフォームによりテキスト（研究テーマ）またはラジオ（障がい） */
     if (/e2r\.jp/i.test(location.hostname) && nm === 'I52') {
@@ -583,7 +609,7 @@ const FieldMatcher = (() => {
         return 0;
       }
     }
-    const signals = getElementSignals(el);
+    const signals = getElementSignals(el, { relaxed });
     let score = 0;
 
     for (const alias of fieldDef.aliases) {
@@ -629,8 +655,9 @@ const FieldMatcher = (() => {
   /**
    * Main matching: returns Map<HTMLElement, fieldKey>
    */
-  function matchFields(elements) {
+  function matchFields(elements, options = {}) {
     const results = new Map(); // el → { key, score }
+    const relaxed = !!options.relaxed;
 
     for (const el of elements) {
       let bestKey = null;
@@ -638,7 +665,7 @@ const FieldMatcher = (() => {
 
       for (const def of FIELD_DEFS) {
         if (def.virtual) continue;
-        const score = scoreElement(el, def);
+        const score = scoreElement(el, def, relaxed);
         if (score > bestScore) {
           bestScore = score;
           bestKey = def.key;
@@ -892,9 +919,10 @@ const FieldMatcher = (() => {
   /**
    * Build fill plan: array of { el, value, key }
    */
-  function buildFillPlan(profile) {
+  function buildFillPlan(profile, options = {}) {
+    const relaxed = !!options.relaxed;
     const elements = getFillableElements();
-    const matches = matchFields(elements);
+    const matches = matchFields(elements, { relaxed });
     let flat = flattenProfile(profile);
     if (
       typeof VacationContact !== 'undefined' &&

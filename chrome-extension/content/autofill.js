@@ -38,9 +38,34 @@ const AutoFill = (() => {
   /**
    * Core fill function — fills all matched fields, returns result summary
    */
-  async function fillPage(profile, { preview = false, delay = 50, highlightFilled = true } = {}) {
+  /**
+   * 未登録サイトではラベル・テーブル行からの推定を強める（manifest 未登録 URL で自動 ON）。
+   */
+  function isRelaxedMatchingEnabled(settings, locationHref) {
+    if (settings?.relaxedMatching === false) return false;
+    if (settings?.relaxedMatching === 'always') return true;
+    if (typeof isRecruitmentAllowedUrl === 'function' && locationHref) {
+      return !isRecruitmentAllowedUrl(locationHref);
+    }
+    return true;
+  }
+
+  async function fillPage(
+    profile,
+    {
+      preview = false,
+      delay = 50,
+      highlightFilled = true,
+      relaxedMatching,
+      settings: fillSettings,
+    } = {}
+  ) {
     const adapter = getAdapter();
-    let plan = FieldMatcher.buildFillPlan(profile);
+    const relaxed =
+      relaxedMatching === true ||
+      (relaxedMatching !== false &&
+        isRelaxedMatchingEnabled(fillSettings || {}, location.href));
+    let plan = FieldMatcher.buildFillPlan(profile, { relaxed });
 
     const cascadeExcluded = new Set();
     if (typeof adapter.collectCascadeExcludedKeys === 'function') {
@@ -171,7 +196,19 @@ const AutoFill = (() => {
       filled += typeof extraFilled === 'number' ? extraFilled : 0;
     }
 
-    return { plan, filled };
+    if (
+      !preview &&
+      typeof PageHealth !== 'undefined' &&
+      typeof PageHealth.checkAfterFill === 'function'
+    ) {
+      const s =
+        typeof StorageUtil !== 'undefined' && StorageUtil.getSettings
+          ? await StorageUtil.getSettings()
+          : {};
+      await PageHealth.checkAfterFill(s);
+    }
+
+    return { plan, filled, adapterName: adapter.name };
   }
 
   function buildOverridePlan(overrides, profile, adapter, excludeKeys = new Set()) {
@@ -329,21 +366,16 @@ const AutoFill = (() => {
       }
     };
 
-    if (
-      typeof isRecruitmentAllowedUrl === 'function' &&
-      !isRecruitmentAllowedUrl(location.href)
-    ) {
-      if (msg.type === 'AUTOFILL_FILL' || msg.type === 'AUTOFILL_PREVIEW') {
-        safeRespond({ success: false, error: 'url-not-allowed' });
-        return true;
-      }
-      return false;
-    }
-
     if (msg.type === 'AUTOFILL_FILL') {
-      const { profile, settings } = msg;
+      const { profile, settings, relaxedMatching } = msg;
+      const fillOpts = {
+        settings,
+        relaxedMatching,
+        delay: settings?.fillDelay ?? 50,
+        highlightFilled: settings?.highlightFilled !== false,
+      };
       if (settings?.previewBeforeFill) {
-        fillPage(profile, { preview: true })
+        fillPage(profile, { preview: true, ...fillOpts })
           .then(({ plan }) => {
             if (typeof AutoFillOverlay !== 'undefined') {
               /* プレビュー確定まで sendResponse を遅らせるとチャネルが閉じてエラーになるため先に応答 */
@@ -353,38 +385,28 @@ const AutoFill = (() => {
                 previewCount: plan.length,
               });
               AutoFillOverlay.showPreview(plan, () => {
-                fillPage(profile, {
-                  preview: false,
-                  delay: settings.fillDelay ?? 50,
-                  highlightFilled: settings.highlightFilled !== false,
-                }).catch(() => {});
+                fillPage(profile, { preview: false, ...fillOpts }).catch(() => {});
               });
             } else {
-              fillPage(profile, {
-                preview: false,
-                delay: settings.fillDelay ?? 50,
-                highlightFilled: settings.highlightFilled !== false,
-              })
+              fillPage(profile, { preview: false, ...fillOpts })
                 .then(({ filled }) => safeRespond({ success: true, filled }))
                 .catch((err) => safeRespond({ success: false, error: err.message }));
             }
           })
           .catch((err) => safeRespond({ success: false, error: err.message }));
       } else {
-        fillPage(profile, {
-          preview: false,
-          delay: settings?.fillDelay ?? 50,
-          highlightFilled: settings?.highlightFilled !== false,
-        })
-          .then(({ filled }) => safeRespond({ success: true, filled }))
+        fillPage(profile, { preview: false, ...fillOpts })
+          .then(({ filled, adapterName }) =>
+            safeRespond({ success: true, filled, adapterName })
+          )
           .catch((err) => safeRespond({ success: false, error: err.message }));
       }
       return true;
     }
 
     if (msg.type === 'AUTOFILL_PREVIEW') {
-      const { profile } = msg;
-      fillPage(profile, { preview: true })
+      const { profile, settings, relaxedMatching } = msg;
+      fillPage(profile, { preview: true, settings, relaxedMatching })
         .then(({ plan }) => {
           if (typeof AutoFillOverlay !== 'undefined') {
             AutoFillOverlay.showPreview(plan, () => {
@@ -416,21 +438,22 @@ const AutoFill = (() => {
     const settings = await StorageUtil.getSettings();
     const delay = settings.fillDelay ?? 50;
     const highlightFilled = settings.highlightFilled !== false;
+    const fillOpts = { settings, delay, highlightFilled };
 
     if (settings.previewBeforeFill) {
-      const { plan } = await fillPage(profile, { preview: true, delay: 0, highlightFilled });
+      const { plan } = await fillPage(profile, { preview: true, delay: 0, ...fillOpts });
       if (typeof AutoFillOverlay !== 'undefined') {
         return new Promise((resolve) => {
           AutoFillOverlay.showPreview(plan, async () => {
-            const r = await fillPage(profile, { preview: false, delay, highlightFilled });
+            const r = await fillPage(profile, { preview: false, ...fillOpts });
             resolve(r);
           });
         });
       }
-      return fillPage(profile, { preview: false, delay, highlightFilled });
+      return fillPage(profile, { preview: false, ...fillOpts });
     }
 
-    return fillPage(profile, { preview: false, delay, highlightFilled });
+    return fillPage(profile, { preview: false, ...fillOpts });
   }
 
   // ──────────────────────────────────────────────

@@ -101,6 +101,12 @@ const DEFAULT_SETTINGS = {
   showFloatingButton: true,
   /** true のときフローティングボタンは専用アダプタが効くページにのみ表示 */
   floatingButtonDedicatedSitesOnly: true,
+  /** on_demand: 任意の https ページでポップアップ操作時に注入 / allowlist_only: 登録 URL のみ */
+  injectionMode: 'on_demand',
+  /** 入力後に「次へ」等が画面外ならスクロールして案内（デフォルトオフ：入力内容の目視確認を優先） */
+  scrollToNavAfterFill: false,
+  /** ポップアップを開いたとき、未注入ならスクリプトを載せて浮動ボタンを表示 */
+  autoInjectOnPopupOpen: true,
 };
 
 const StorageUtil = {

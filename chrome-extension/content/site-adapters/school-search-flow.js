@@ -594,16 +594,8 @@ const SchoolSearchFlowAdapter = {
   },
 
   _findNextStepLink() {
-    const sel =
-      'a[href*="nextpage"], a.btn_w160b, a[class*="btn_"], .btn_w160 a, .btn_w160b a, p.btn_w160 a, p[class*="btn"] a';
-    const links = [...document.querySelectorAll(sel)];
-    for (const a of links) {
-      const href = a.getAttribute('href') || '';
-      const t = (a.textContent || '').trim();
-      if (/次へ/.test(t) && /nextpage/i.test(href)) return a;
-    }
-    for (const a of links) {
-      if (/次へ/.test((a.textContent || '').trim())) return a;
+    if (typeof NavControls !== 'undefined' && NavControls.findNextStepLink) {
+      return NavControls.findNextStepLink();
     }
     return null;
   },

@@ -4,9 +4,11 @@
  * Floating 「自動入力」 button on supported pages (Axol-style UX).
  */
 (function initFloatingAutofillButton() {
-  if (typeof isRecruitmentAllowedUrl === 'function' && !isRecruitmentAllowedUrl(location.href)) {
+  if (typeof window !== 'undefined' && window.__afpFloatInit) {
+    if (window.AfpFloatButton?.sync) window.AfpFloatButton.sync();
     return;
   }
+  if (typeof window !== 'undefined') window.__afpFloatInit = true;
 
   const ROOT_ID = 'afp-float-autofill-root';
 
@@ -23,6 +25,24 @@
     } catch (_) {
       return false;
     }
+  }
+
+  /**
+   * 「専用サイトのみ」設定時の表示判定。
+   * manifest 登録 URL（就活 ATS）は Generic でもボタンを出す。未登録の on-demand ページだけ除外する。
+   */
+  function pageQualifiesForDedicatedFloat() {
+    if (pageHasDedicatedAdapter()) return true;
+    try {
+      if (typeof isRecruitmentAllowedUrl === 'function' && isRecruitmentAllowedUrl(location.href)) {
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  function autofillReady() {
+    return typeof AutoFill !== 'undefined' && typeof AutoFill.runFillFromUI === 'function';
   }
 
   function mountButton() {
@@ -133,12 +153,12 @@
       return;
     }
 
-    if (dedicatedOnly && !pageHasDedicatedAdapter()) {
+    if (dedicatedOnly && !pageQualifiesForDedicatedFloat()) {
       existing?.remove();
       return;
     }
 
-    if (!existing && typeof AutoFill !== 'undefined' && typeof AutoFill.runFillFromUI === 'function') {
+    if (!existing && autofillReady()) {
       mountButton();
     }
   }
@@ -149,24 +169,24 @@
     syncTimer = setTimeout(sync, 150);
   }
 
+  function startDomObserver() {
+    const target = document.body || document.documentElement;
+    if (!target || target.__afpFloatObserved) return;
+    target.__afpFloatObserved = true;
+    new MutationObserver(scheduleSync).observe(target, {
+      childList: true,
+      subtree: true,
+    });
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       sync();
-      if (document.body) {
-        new MutationObserver(scheduleSync).observe(document.body, {
-          childList: true,
-          subtree: true,
-        });
-      }
+      startDomObserver();
     });
   } else {
     sync();
-    if (document.body) {
-      new MutationObserver(scheduleSync).observe(document.body, {
-        childList: true,
-        subtree: true,
-      });
-    }
+    startDomObserver();
   }
 
   try {
@@ -174,4 +194,20 @@
       if (area === 'local' && changes.settings) sync();
     });
   } catch (_) {}
+
+  try {
+    chrome.runtime.onMessage.addListener((msg) => {
+      if (msg?.type === 'AFP_SYNC_FLOAT') {
+        scheduleSync();
+        setTimeout(sync, 400);
+      }
+    });
+  } catch (_) {}
+
+  if (typeof window !== 'undefined') {
+    window.AfpFloatButton = { sync, scheduleSync };
+  }
+
+  /* オンデマンド注入直後や DOM 遅延読み込み向けに再同期 */
+  [0, 300, 800, 1500, 3000].forEach((ms) => setTimeout(sync, ms));
 })();

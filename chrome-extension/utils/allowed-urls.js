@@ -13,13 +13,21 @@ var RECRUITMENT_ALLOWED_MATCH_PATTERNS = [
   '*://axol.jp/zw/s/*/entry/*',
   /* entry_2124220008/input など entry_<id> 形式（/entry/ ではない） */
   '*://axol.jp/zw/s/*/*/*',
+  /* job.axol.jp（三菱商事等 bx テナント） */
+  '*://job.axol.jp/bx/s/*/mypage/*',
+  '*://job.axol.jp/bx/s/*/entry/*',
+  '*://job.axol.jp/bx/s/*/*/*',
   '*://www.e2r.jp/ja/*/career_edu/*',
   '*://www.e2r.jp/eARTH/*',
   '*://job.mynavi.jp/28/pc/*',
   '*://mypage.*.i-webs.jp/*',
+  /* 旧 i-web 系（fujifilm.i-web.jpn.com 等） */
+  '*://*.i-web.jpn.com/*',
   /* sonar ATS テナント（nttdata / docomo-recruit / lycorp 等）を一括で許可 */
   '*://*.snar.jp/*',
   '*://suntory.saiyo.jp/2028/*',
+  /* 三菱UFJ銀行 マイページ（ES 系 form1） */
+  '*://www.mypage.bk.mufg.jp/*',
 ];
 
 /**
@@ -129,10 +137,44 @@ function isRecruitmentAllowedUrl(url) {
   });
 }
 
+/**
+ * 一般的な Web ページ（http/https）か。
+ * @param {string|undefined} url
+ * @returns {boolean}
+ */
+function isHttpPageUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  if (url.startsWith('chrome://') || url.startsWith('chrome-extension://')) return false;
+  if (/^https?:\/\//i.test(url)) return true;
+  try {
+    var u = new URL(url);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * ユーザー操作によるオンデマンド注入が可能か。
+ * @param {string|undefined} url
+ * @param {{ injectionMode?: string }|undefined} settings
+ * @returns {boolean}
+ */
+function canInjectOnDemand(url, settings) {
+  if (!isHttpPageUrl(url)) return false;
+  var mode = (settings && settings.injectionMode) || 'on_demand';
+  if (mode === 'allowlist_only') {
+    return isRecruitmentAllowedUrl(url);
+  }
+  return true;
+}
+
 /* global self, window */
 var root = typeof self !== 'undefined' ? self : typeof window !== 'undefined' ? window : globalThis;
 if (root) {
   root.RECRUITMENT_ALLOWED_MATCH_PATTERNS = RECRUITMENT_ALLOWED_MATCH_PATTERNS;
   root.matchesChromeMatchPattern = matchesChromeMatchPattern;
   root.isRecruitmentAllowedUrl = isRecruitmentAllowedUrl;
+  root.isHttpPageUrl = isHttpPageUrl;
+  root.canInjectOnDemand = canInjectOnDemand;
 }

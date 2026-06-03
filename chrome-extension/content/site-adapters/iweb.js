@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * i-web adapter (i-web.co.jp / career.hunet.co.jp / *.i-webs.jp / *.saiyo.jp マイページ)
+ * i-web adapter (i-web.co.jp / *.i-web.jpn.com / career.hunet.co.jp / *.i-webs.jp / *.saiyo.jp マイページ)
  * i-webs 系は jqTransform で select を隠すことが多い — FieldMatcher の可視判定と
  * GenericAdapter のラベル同期で対応。gyubin/gken/gadrs 等は EntrySheetAdapter が
  * getAdapter() で iweb より先に選ばれる（フォーム DOM があるページ）。
@@ -14,6 +14,7 @@ const IWebAdapter = {
     const h = location.hostname;
     return (
       /i-web\.co\.jp|career\.hunet\.co\.jp/i.test(h) ||
+      /\.i-web\.jpn\.com$/i.test(h) ||
       /\.i-webs\.jp$/i.test(h) ||
       /\.saiyo\.jp$/i.test(h)
     );

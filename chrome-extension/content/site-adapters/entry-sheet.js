@@ -2,7 +2,7 @@
 
 /**
  * エントリーシート系（複数社で似たレイアウトのことが多い）
- * - formConfirm など + 現住所 gyubin*/gken/gadrs* + 携帯 kttel* + 休暇 kyubin*/kken/kadrs*
+ * - formConfirm など + 現住所 gyubin1/gyubin2/gken/gadrs* + 携帯 kttel* + 休暇 kyubin1/kyubin2/kken/kadrs*
  * 学校検索ウィザード（gkbン等）とは分離して判定する。
  */
 const EntrySheetAdapter = {
@@ -20,6 +20,10 @@ const EntrySheetAdapter = {
     return '';
   },
 
+  _isMufgEsHost() {
+    return /(?:^|\.)mypage\.bk\.mufg\.jp$/i.test(location.hostname);
+  },
+
   _looksLikeEsForm(form) {
     if (!form) return false;
     if (form.querySelector('input[type="radio"][name="gkbn"]')) return false;
@@ -30,7 +34,22 @@ const EntrySheetAdapter = {
     );
   },
 
+  _looksLikeMufgBasicForm(form) {
+    if (!form || !this._isMufgEsHost()) return false;
+    return !!(
+      form.querySelector('input[name="kname1"]') &&
+      form.querySelector('select[name="gken"]') &&
+      form.querySelector('input[name="gyubin1"]')
+    );
+  },
+
   _esForm() {
+    if (this._isMufgEsHost()) {
+      const mufgForm = document.querySelector('form[name="form1"]');
+      if (mufgForm && (this._looksLikeEsForm(mufgForm) || this._looksLikeMufgBasicForm(mufgForm))) {
+        return mufgForm;
+      }
+    }
     const idForm = document.querySelector('form#formConfirm');
     if (idForm && this._looksLikeEsForm(idForm)) return idForm;
     const named = document.querySelector('form[name="formConfirm"]');
@@ -96,6 +115,13 @@ const EntrySheetAdapter = {
     const p = this._esRootSelector(form);
     if (!p) return {};
     return {
+      lastName: `${p} input[name="kname1"]`,
+      firstName: `${p} input[name="kname2"]`,
+      lastKana: `${p} input[name="yname1"]`,
+      firstKana: `${p} input[name="yname2"]`,
+      dobYear: `${p} select#ybirth,${p} select[name="ybirth"]`,
+      dobMonth: `${p} select#mbirth,${p} select[name="mbirth"]`,
+      dobDay: `${p} select#dbirth,${p} select[name="dbirth"]`,
       zip1: `${p} input[name="gyubin1"]`,
       zip2: `${p} input[name="gyubin2"]`,
       prefecture: `${p} select[name="gken"]`,
@@ -107,7 +133,17 @@ const EntrySheetAdapter = {
       zipVacation2: `${p} input[name="kyubin2"]`,
       prefectureVacation: `${p} select[name="kken"]`,
       buildingVacation: `${p} input[name="kadrs2"]`,
+      gradYear: `${p} select[name="syear"]`,
+      gradMonth: `${p} select[name="smonth"]`,
+      graduationStatus: `${p} select[name="shikbn"]`,
     };
+  },
+
+  _splitEmail(email) {
+    const raw = String(email || '').trim();
+    const at = raw.indexOf('@');
+    if (at <= 0) return { local: '', domain: '' };
+    return { local: raw.slice(0, at), domain: raw.slice(at + 1) };
   },
 
   _addTelRow(form, add, prefix, a, b, c, keyBase) {
@@ -149,6 +185,21 @@ const EntrySheetAdapter = {
     const lineMain = `${flat.city || ''}${flat.address || ''}`.trim();
     const g1 = form.querySelector('input[name="gadrs1"]');
     if (g1 && lineMain) add(g1, 'address', lineMain);
+
+    const mainMail = this._splitEmail(flat.email);
+    if (mainMail.local) {
+      add(form.querySelector('input[name="account1"]'), 'email', mainMail.local);
+      add(form.querySelector('input[name="domain1"]'), 'email', mainMail.domain);
+      add(form.querySelector('input[name="account2"]'), 'emailConfirm', mainMail.local);
+      add(form.querySelector('input[name="domain2"]'), 'emailConfirm', mainMail.domain);
+    }
+    const subMail = this._splitEmail(flat.emailSub1);
+    if (subMail.local) {
+      add(form.querySelector('input[name="account3"]'), 'emailSub1', subMail.local);
+      add(form.querySelector('input[name="domain3"]'), 'emailSub1', subMail.domain);
+      add(form.querySelector('input[name="account4"]'), 'secondaryEmailConfirm', subMail.local);
+      add(form.querySelector('input[name="domain4"]'), 'secondaryEmailConfirm', subMail.domain);
+    }
 
     this._addTelRow(form, add, 'gtel', flat.homePhone1, flat.homePhone2, flat.homePhone3, 'homePhone');
 

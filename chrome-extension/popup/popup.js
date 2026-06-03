@@ -23,6 +23,30 @@ async function init() {
   renderVisited();
   updateStatus();
   bindEvents();
+  ensureContentScriptsForFloatButton();
+}
+
+/** 未登録サイトでも、ポップアップを開いた時点でスクリプトを載せて浮動ボタンを出す */
+async function ensureContentScriptsForFloatButton() {
+  if (!currentTab?.id) return;
+  if (typeof canInjectOnDemand === 'function' && !canInjectOnDemand(currentTab.url, settings)) {
+    return;
+  }
+  if (settings.autoInjectOnPopupOpen === false) return;
+
+  try {
+    const ping = await chrome.tabs.sendMessage(currentTab.id, { type: 'PING' });
+    if (ping?.ready) return;
+  } catch (_) {}
+
+  try {
+    await injectContentScripts();
+    try {
+      await chrome.tabs.sendMessage(currentTab.id, { type: 'AFP_SYNC_FLOAT' });
+    } catch (_) {}
+  } catch (_) {
+    /* activeTab 未取得・注入拒否時は Fill クリック時に再試行 */
+  }
 }
 
 // ───────────────────────────────────────────
@@ -46,25 +70,41 @@ function getSelectedProfile() {
 function updateStatus() {
   const bar = document.getElementById('statusBar');
   const text = document.getElementById('statusText');
+  const fillBtn = document.getElementById('fillBtn');
+  const previewBtn = document.getElementById('previewBtn');
 
-  if (!currentTab?.url || currentTab.url.startsWith('chrome://')) {
+  if (
+    !currentTab?.url ||
+    (typeof isHttpPageUrl === 'function' && !isHttpPageUrl(currentTab.url))
+  ) {
     bar.className = 'status-bar status-bar--warn';
     text.textContent = 'このページでは使用できません';
-    document.getElementById('fillBtn').disabled = true;
-    document.getElementById('previewBtn').disabled = true;
+    fillBtn.disabled = true;
+    previewBtn.disabled = true;
     return;
   }
 
-  if (typeof isRecruitmentAllowedUrl === 'function' && !isRecruitmentAllowedUrl(currentTab.url)) {
+  const canInject =
+    typeof canInjectOnDemand === 'function' && canInjectOnDemand(currentTab.url, settings);
+  if (!canInject) {
     bar.className = 'status-bar status-bar--warn';
-    text.textContent = 'この拡張は登録済みの就活サイト上でのみ利用できます';
-    document.getElementById('fillBtn').disabled = true;
-    document.getElementById('previewBtn').disabled = true;
+    text.textContent = '設定により、このページでは注入できません';
+    fillBtn.disabled = true;
+    previewBtn.disabled = true;
     return;
   }
+
+  const onAllowlist =
+    typeof isRecruitmentAllowedUrl === 'function' && isRecruitmentAllowedUrl(currentTab.url);
 
   bar.className = 'status-bar status-bar--ready';
-  text.textContent = 'フォームを検出しました — 入力できます';
+  if (onAllowlist) {
+    text.textContent = 'フォームを検出しました — 入力できます';
+  } else {
+    text.textContent = 'このページで自動入力を試せます（未登録サイト・動作保証なし）';
+  }
+  fillBtn.disabled = false;
+  previewBtn.disabled = false;
 }
 
 // ───────────────────────────────────────────
@@ -105,6 +145,32 @@ function formatDate(ts) {
 // ───────────────────────────────────────────
 // Fill / Preview
 // ───────────────────────────────────────────
+function isOnAllowlist() {
+  return (
+    typeof isRecruitmentAllowedUrl === 'function' &&
+    currentTab?.url &&
+    isRecruitmentAllowedUrl(currentTab.url)
+  );
+}
+
+function buildAutofillMessage(profile) {
+  return {
+    type: 'AUTOFILL_FILL',
+    profile,
+    settings,
+    relaxedMatching: !isOnAllowlist(),
+  };
+}
+
+function buildPreviewMessage(profile) {
+  return {
+    type: 'AUTOFILL_PREVIEW',
+    profile,
+    settings,
+    relaxedMatching: !isOnAllowlist(),
+  };
+}
+
 function showFillResult(response) {
   if (!response?.success) {
     showResult('入力できませんでした', true);
@@ -119,7 +185,37 @@ function showFillResult(response) {
     );
     return;
   }
-  showResult(`${response.filled ?? 0} 件のフィールドに入力しました`);
+  const n = response.filled ?? 0;
+  if (n === 0) {
+    showResult(
+      '0 件でした。プロフィールの氏名・メール等を確認するか、詳細設定で項目を埋めてください',
+      true
+    );
+    return;
+  }
+  const mode =
+    !isOnAllowlist() && response.adapterName === 'generic'
+      ? '（汎用マッチ）'
+      : '';
+  showResult(`${n} 件のフィールドに入力しました${mode}`);
+}
+
+async function tryInjectWithPermission() {
+  try {
+    await injectContentScripts();
+    return true;
+  } catch (_) {
+    try {
+      const granted = await chrome.permissions.request({
+        origins: ['https://*/*', 'http://*/*'],
+      });
+      if (granted) {
+        await injectContentScripts();
+        return true;
+      }
+    } catch (__) {}
+    return false;
+  }
 }
 
 async function doFill() {
@@ -133,26 +229,25 @@ async function doFill() {
   btn.disabled = true;
   btn.textContent = '入力中...';
 
-  try {
-    const response = await chrome.tabs.sendMessage(currentTab.id, {
-      type: 'AUTOFILL_FILL',
-      profile,
-      settings,
-    });
+  const msg = buildAutofillMessage(profile);
 
+  try {
+    let response = await chrome.tabs.sendMessage(currentTab.id, msg);
     showFillResult(response);
   } catch (err) {
-    // Content script not injected yet — inject and retry
-    try {
-      await injectContentScripts();
-      const response = await chrome.tabs.sendMessage(currentTab.id, {
-        type: 'AUTOFILL_FILL',
-        profile,
-        settings,
-      });
-      showFillResult(response);
-    } catch (_) {
-      showResult('このページでは入力できません', true);
+    const ok = await tryInjectWithPermission();
+    if (!ok) {
+      showResult(
+        'スクリプトを載せられませんでした。拡張アイコンをもう一度押すか、設定の「広域サイト権限」を試してください',
+        true
+      );
+    } else {
+      try {
+        const response = await chrome.tabs.sendMessage(currentTab.id, msg);
+        showFillResult(response);
+      } catch (__) {
+        showResult('このページでは入力できません', true);
+      }
     }
   }
 
@@ -167,21 +262,21 @@ async function doPreview() {
   const profile = latestProfiles.find((p) => p.id === id) || latestProfiles[0];
   if (!profile) return;
 
+  const msg = buildPreviewMessage(profile);
+
   try {
-    const response = await chrome.tabs.sendMessage(currentTab.id, {
-      type: 'AUTOFILL_PREVIEW',
-      profile,
-    });
+    const response = await chrome.tabs.sendMessage(currentTab.id, msg);
     if (response?.success) {
       showResult(`${response.count} 件のフィールドが入力対象です`);
     }
   } catch (_) {
+    const ok = await tryInjectWithPermission();
+    if (!ok) {
+      showResult('このページでは使用できません', true);
+      return;
+    }
     try {
-      await injectContentScripts();
-      const response = await chrome.tabs.sendMessage(currentTab.id, {
-        type: 'AUTOFILL_PREVIEW',
-        profile,
-      });
+      const response = await chrome.tabs.sendMessage(currentTab.id, msg);
       if (response?.success) {
         showResult(`${response.count} 件のフィールドが入力対象です`);
       }
@@ -192,31 +287,40 @@ async function doPreview() {
 }
 
 async function injectContentScripts() {
-  if (typeof isRecruitmentAllowedUrl === 'function' && !isRecruitmentAllowedUrl(currentTab.url)) {
+  settings = await StorageUtil.getSettings();
+  if (typeof canInjectOnDemand === 'function' && !canInjectOnDemand(currentTab.url, settings)) {
     throw new Error('url-not-allowed');
   }
-  // Keep in sync with manifest.json content_scripts js[] order
+  const files =
+    typeof AFP_CONTENT_SCRIPT_FILES !== 'undefined'
+      ? AFP_CONTENT_SCRIPT_FILES
+      : [
+          'utils/allowed-urls.js',
+          'utils/storage.js',
+          'utils/furigana.js',
+          'utils/postal.js',
+          'utils/vacation-contact.js',
+          'utils/nav-controls.js',
+          'content/field-matcher.js',
+          'content/overlay.js',
+          'content/page-health.js',
+          'content/site-adapters/generic.js',
+          'content/site-adapters/axol.js',
+          'content/site-adapters/e2r-earth.js',
+          'content/site-adapters/iweb.js',
+          'content/site-adapters/snar.js',
+          'content/site-adapters/school-search-flow.js',
+          'content/site-adapters/entry-sheet.js',
+          'content/autofill.js',
+          'content/float-button.js',
+        ];
   await chrome.scripting.executeScript({
     target: { tabId: currentTab.id },
-    files: [
-      'utils/allowed-urls.js',
-      'utils/storage.js',
-      'utils/furigana.js',
-      'utils/postal.js',
-      'utils/vacation-contact.js',
-      'content/field-matcher.js',
-      'content/overlay.js',
-      'content/site-adapters/generic.js',
-      'content/site-adapters/axol.js',
-      'content/site-adapters/e2r-earth.js',
-      'content/site-adapters/iweb.js',
-      'content/site-adapters/snar.js',
-      'content/site-adapters/school-search-flow.js',
-      'content/site-adapters/entry-sheet.js',
-      'content/autofill.js',
-      'content/float-button.js',
-    ],
+    files,
   });
+  try {
+    await chrome.tabs.sendMessage(currentTab.id, { type: 'AFP_SYNC_FLOAT' });
+  } catch (_) {}
 }
 
 function showResult(msg, isError = false) {

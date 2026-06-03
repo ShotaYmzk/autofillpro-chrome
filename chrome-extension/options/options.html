@@ -536,6 +536,16 @@
             </div>
             <div class="settings-item">
               <div class="settings-item__info">
+                <div class="settings-item__label">拡張アイコンを開いたときにページへボタンを出す</div>
+                <div class="settings-item__desc">MUFG など未登録ドメインでも、ポップアップを開くと右下の「自動入力」ボタンを表示します（ページ再読込後は再度ポップアップを開いてください）</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="autoInjectOnPopupOpen" />
+                <span class="toggle__slider"></span>
+              </label>
+            </div>
+            <div class="settings-item">
+              <div class="settings-item__info">
                 <div class="settings-item__label">ページ内に「自動入力」ボタンを表示</div>
                 <div class="settings-item__desc">対応するマイページ右下に緑のフローティングボタンを出します（下の「すべてのサイト…」がオフのときは Axol・i-Web など認識したサイトのみ）</div>
               </div>
@@ -554,6 +564,31 @@
                 <span class="toggle__slider"></span>
               </label>
             </div>
+            <div class="settings-item">
+              <div class="settings-item__info">
+                <div class="settings-item__label">入力後に「次へ」へ自動スクロール</div>
+                <div class="settings-item__desc">オフ（初期設定）のときはスクロールしません。長いフォームで「次へ」が画面外のときだけ、自動入力後にそのボタンへスクロールします</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="scrollToNavAfterFill" />
+                <span class="toggle__slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="form-group mt-16">
+            <label class="form-label">スクリプト注入の範囲</label>
+            <select id="injectionMode" class="form-input">
+              <option value="on_demand">任意の Web ページ（拡張アイコンから操作時）</option>
+              <option value="allowlist_only">登録済み就活サイトのみ</option>
+            </select>
+            <p class="form-hint">「任意の Web ページ」では MUFG など未登録ドメインでもポップアップから自動入力を試せます。常駐は登録済み ATS のみです。</p>
+          </div>
+          <div class="settings-item mt-16">
+            <div class="settings-item__info">
+              <div class="settings-item__label">広域サイト権限を有効化（任意）</div>
+              <div class="settings-item__desc">一部環境で activeTab 注入が失敗する場合に、https 全般への権限を追加します</div>
+            </div>
+            <button type="button" id="grantBroadHostBtn" class="btn btn--secondary btn--sm">権限をリクエスト</button>
           </div>
           <div class="form-group mt-16">
             <label class="form-label">入力間隔（ミリ秒）</label>

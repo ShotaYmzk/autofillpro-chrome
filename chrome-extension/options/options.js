@@ -452,7 +452,10 @@ function loadSettings() {
   setChecked('autoDetect', settings.autoDetect !== false);
   setChecked('showFloatingButton', settings.showFloatingButton !== false);
   setChecked('floatingButtonAllSites', settings.floatingButtonDedicatedSitesOnly === false);
+  setChecked('scrollToNavAfterFill', !!settings.scrollToNavAfterFill);
+  setChecked('autoInjectOnPopupOpen', settings.autoInjectOnPopupOpen !== false);
   setValue('fillDelay', settings.fillDelay ?? 50);
+  setValue('injectionMode', settings.injectionMode === 'allowlist_only' ? 'allowlist_only' : 'on_demand');
 }
 
 function collectSettings() {
@@ -462,6 +465,9 @@ function collectSettings() {
     autoDetect: isChecked('autoDetect'),
     showFloatingButton: isChecked('showFloatingButton'),
     floatingButtonDedicatedSitesOnly: !isChecked('floatingButtonAllSites'),
+    scrollToNavAfterFill: isChecked('scrollToNavAfterFill'),
+    autoInjectOnPopupOpen: isChecked('autoInjectOnPopupOpen'),
+    injectionMode: getValue('injectionMode') === 'allowlist_only' ? 'allowlist_only' : 'on_demand',
     fillDelay: parseInt(getValue('fillDelay'), 10) || 50,
   };
 }
@@ -576,6 +582,17 @@ function bindEvents() {
     renderProfileList();
     loadProfile(newActive);
     showToast('削除しました');
+  });
+
+  document.getElementById('grantBroadHostBtn')?.addEventListener('click', async () => {
+    try {
+      const granted = await chrome.permissions.request({
+        origins: ['https://*/*', 'http://*/*'],
+      });
+      showToast(granted ? '広域権限を付与しました' : '権限は付与されませんでした', granted ? 'success' : 'error');
+    } catch (e) {
+      showToast('権限リクエストに失敗しました', 'error');
+    }
   });
 
   // Postal code lookup - current address
