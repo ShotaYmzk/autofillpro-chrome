@@ -48,6 +48,9 @@
       </nav>
 
       <div class="sidebar__footer">
+        <button id="showTutorialBtn" class="btn btn--ghost btn--sm btn--full" style="margin-bottom:6px">
+          📖 使い方ガイドを見る
+        </button>
         <button id="exportBtn" class="btn btn--ghost btn--sm">エクスポート</button>
         <button id="importBtn" class="btn btn--ghost btn--sm">インポート</button>
         <input type="file" id="importFile" accept=".json" style="display:none" />
@@ -632,5 +635,11 @@
   <script src="../utils/furigana.js"></script>
   <script src="../utils/postal.js"></script>
   <script src="options.js"></script>
+  <script src="../onboarding/onboarding.js"></script>
+  <script>
+    document.getElementById('showTutorialBtn').addEventListener('click', () => {
+      window.showOnboarding(true);
+    });
+  </script>
 </body>
 </html>

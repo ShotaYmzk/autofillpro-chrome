@@ -10,13 +10,20 @@ importScripts('../utils/allowed-urls.js');
 // ──────────────────────────────────────────────
 // Install / Update
 // ──────────────────────────────────────────────
-chrome.runtime.onInstalled.addListener((details) => {
+chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === 'install') {
-    chrome.runtime.openOptionsPage(() => {
-      if (chrome.runtime.lastError) {
-        const url = chrome.runtime.getURL('options/options.html');
-        chrome.tabs.create({ url });
-      }
+    await chrome.storage.local.set({ onboardingCompleted: false });
+
+    // Open the options page and trigger the onboarding modal
+    chrome.tabs.create({ url: chrome.runtime.getURL('options/options.html') }, (tab) => {
+      // Wait for the page to load before sending the message
+      const listener = (tabId, changeInfo) => {
+        if (tabId === tab.id && changeInfo.status === 'complete') {
+          chrome.tabs.onUpdated.removeListener(listener);
+          chrome.tabs.sendMessage(tab.id, { type: 'SHOW_ONBOARDING' }).catch(() => {});
+        }
+      };
+      chrome.tabs.onUpdated.addListener(listener);
     });
   }
 });

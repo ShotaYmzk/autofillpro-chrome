@@ -85,7 +85,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["icons/*.png"],
+      "resources": ["icons/*.png", "onboarding/onboarding.css"],
       "matches": [
         "*://axol.jp/*",
         "*://job.axol.jp/*",
