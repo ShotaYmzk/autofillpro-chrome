@@ -51,17 +51,14 @@ function buildStepHTML(index) {
     `<div class="ob-progress-bar${i <= index ? ' active' : ''}"></div>`
   ).join('');
 
-  const featureItems = step.features.map((f, i) => `
+  const featureItems = step.features.map((f) => `
     <li>
-      <span class="ob-badge">${i + 1}</span>
-      <span class="ob-feature-text">
-        <span class="ob-feature-label">${f.label}</span>
-        <span class="ob-feature-sub">${f.sub}</span>
-      </span>
+      <span class="ob-feature-label">${f.label}</span>
+      <span class="ob-feature-sub">${f.sub}</span>
     </li>
   `).join('');
 
-  const nextLabel = isLast ? '情報登録へ進む' : '次へ';
+  const nextLabel = isLast ? '情報登録を始める' : '次へ';
 
   return `
     <div class="ob-header">
@@ -75,18 +72,18 @@ function buildStepHTML(index) {
     </div>
     <div class="ob-footer">
       <div class="ob-footer-left">
-        <button class="ob-btn ob-btn--ghost" id="ob-skip">あとで見る</button>
+        <button type="button" class="ob-skip-link" id="ob-skip">あとで見る</button>
       </div>
       <div class="ob-footer-right">
-        <button class="ob-btn ob-btn--outline" id="ob-prev" ${index === 0 ? 'disabled' : ''}>戻る</button>
-        <button class="ob-btn ob-btn--primary" id="ob-next">${nextLabel}</button>
+        <button type="button" class="btn btn--secondary btn--sm" id="ob-prev" ${index === 0 ? 'disabled' : ''}>戻る</button>
+        <button type="button" class="btn btn--primary btn--sm" id="ob-next">${nextLabel}</button>
       </div>
     </div>
   `;
 }
 
 function attachListeners() {
-  overlayEl.querySelector('#ob-skip').addEventListener('click', closeOnboarding);
+  overlayEl.querySelector('#ob-skip').addEventListener('click', dismissOnboarding);
   overlayEl.querySelector('#ob-prev').addEventListener('click', () => {
     if (currentStep > 0) renderStep(currentStep - 1);
   });
@@ -95,12 +92,12 @@ function attachListeners() {
       renderStep(currentStep + 1);
     } else {
       await markCompleted();
-      closeOnboarding();
-      chrome.runtime.openOptionsPage();
+      removeOverlay();
+      document.getElementById('lastName')?.focus();
     }
   });
   overlayEl.addEventListener('click', (e) => {
-    if (e.target === overlayEl) closeOnboarding();
+    if (e.target === overlayEl) dismissOnboarding();
   });
 }
 
@@ -114,12 +111,15 @@ async function markCompleted() {
   await chrome.storage.local.set({ onboardingCompleted: true });
 }
 
-function closeOnboarding() {
-  markCompleted();
+function removeOverlay() {
   if (overlayEl) {
     overlayEl.remove();
     overlayEl = null;
   }
+}
+
+function dismissOnboarding() {
+  removeOverlay();
 }
 
 function injectCSS() {
@@ -132,15 +132,16 @@ function injectCSS() {
 }
 
 function showOnboarding(forceShow = false) {
-  if (overlayEl) return;
+  if (overlayEl) removeOverlay();
 
   if (!forceShow) {
     chrome.storage.local.get(['onboardingCompleted'], (data) => {
       if (!data.onboardingCompleted) _render();
     });
-  } else {
-    _render();
+    return;
   }
+
+  _render();
 }
 
 function _render() {
@@ -155,11 +156,12 @@ function _render() {
   renderStep(0);
 }
 
-// Message listener: triggered from service worker on fresh install
-chrome.runtime.onMessage.addListener((msg) => {
-  if (msg.type === 'SHOW_ONBOARDING') showOnboarding(false);
-  if (msg.type === 'SHOW_ONBOARDING_FORCE') showOnboarding(true);
-});
+function initOnboarding() {
+  const tutorialBtn = document.getElementById('showTutorialBtn');
+  if (tutorialBtn) {
+    tutorialBtn.addEventListener('click', () => showOnboarding(true));
+  }
+  showOnboarding(false);
+}
 
-// Expose for inline button use (options page)
-window.showOnboarding = showOnboarding;
+document.addEventListener('DOMContentLoaded', initOnboarding);
