@@ -237,6 +237,10 @@ const E2rEarthAdapter = {
 
   _graduationDatesFromProfile(profile) {
     const e = profile.education || {};
+    if (typeof EducationDates !== 'undefined') {
+      const { final } = EducationDates.resolve(e);
+      return { year: final.gradYear, month: final.gradMonth };
+    }
     const isGrad = /大学院/.test(e.schoolType || '');
     return {
       year: isGrad ? e.gradSchoolGradYear || e.gradYear : e.gradYear,

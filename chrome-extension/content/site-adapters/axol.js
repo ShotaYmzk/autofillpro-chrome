@@ -307,20 +307,21 @@ const AxolAdapter = {
       this._prefectureToCode(flat.highSchoolPref) || flat.highSchoolPref;
 
     const schoolLabel = this._schoolKindLabel(e.schoolType || '');
-    const isGradSchool = /大学院/.test(e.schoolType || '');
-
-    const enrollY = isGradSchool
-      ? (e.gradSchoolEnrollYear || e.enrollYear || '')
-      : (e.enrollYear || '');
-    const enrollM = isGradSchool
-      ? (e.gradSchoolEnrollMonth || e.enrollMonth || '')
-      : (e.enrollMonth || '');
-    const gradY = isGradSchool
-      ? (e.gradSchoolGradYear || e.gradYear || '')
-      : (e.gradYear || '');
-    const gradM = isGradSchool
-      ? (e.gradSchoolGradMonth || e.gradMonth || '')
-      : (e.gradMonth || '');
+    const dates =
+      typeof EducationDates !== 'undefined'
+        ? EducationDates.resolve(e)
+        : {
+            final: {
+              enrollYear: e.enrollYear || '',
+              enrollMonth: e.enrollMonth || '',
+              gradYear: e.gradYear || '',
+              gradMonth: e.gradMonth || '',
+            },
+          };
+    const enrollY = dates.final.enrollYear;
+    const enrollM = dates.final.enrollMonth;
+    const gradY = dates.final.gradYear;
+    const gradM = dates.final.gradMonth;
 
     let merged = { ...flat, prefecture: prefCode || flat.prefecture };
     if (

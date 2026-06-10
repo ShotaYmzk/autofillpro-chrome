@@ -20,6 +20,14 @@ const IWebAdapter = {
     );
   },
 
+  mapFlat(profile) {
+    let flat = FieldMatcher.flattenProfile(profile);
+    if (typeof EducationDates !== 'undefined') {
+      flat = EducationDates.applyToFlat(flat, profile.education);
+    }
+    return flat;
+  },
+
   getOverrides() {
     return {
       gender:
@@ -29,6 +37,15 @@ const IWebAdapter = {
       dobMonth: 'select#mbirth,select[name="mbirth"]',
       dobDay: 'select#dbirth,select[name="dbirth"]',
     };
+  },
+
+  /** syear はサイト側の既定卒業年を維持（Entry Sheet と同様に上書きしない） */
+  pruneFillPlan(plan) {
+    if (!this.matches()) return plan;
+    return plan.filter((row) => {
+      const n = String(row.el?.name || row.el?.id || '');
+      return n !== 'syear';
+    });
   },
 
   fillElement(el, value) { return GenericAdapter.fillElement(el, value); },

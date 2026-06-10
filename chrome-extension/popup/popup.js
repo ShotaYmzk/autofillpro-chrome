@@ -300,6 +300,7 @@ async function injectContentScripts() {
           'utils/furigana.js',
           'utils/postal.js',
           'utils/vacation-contact.js',
+          'utils/education-dates.js',
           'utils/nav-controls.js',
           'content/field-matcher.js',
           'content/overlay.js',
