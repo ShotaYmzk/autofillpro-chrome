@@ -18,13 +18,137 @@ let settings = {};
 let formDirty = false;
 let suppressDirty = false;
 
+const AUTO_SAVE_DELAY_MS = 600;
+let autoSaveTimer = null;
+let saveInFlight = false;
+let saveStatusTimer = null;
+
 function markDirty() {
   if (suppressDirty) return;
   formDirty = true;
+  scheduleAutoSave();
 }
 
 function clearDirty() {
   formDirty = false;
+}
+
+function cancelAutoSave() {
+  if (autoSaveTimer) {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = null;
+  }
+}
+
+function scheduleAutoSave() {
+  cancelAutoSave();
+  autoSaveTimer = setTimeout(() => {
+    autoSaveTimer = null;
+    saveProfile({ silent: true });
+  }, AUTO_SAVE_DELAY_MS);
+}
+
+async function flushAutoSave() {
+  cancelAutoSave();
+  if (!formDirty) return true;
+  return saveProfile({ silent: true });
+}
+
+function updateSaveStatus(text, type = '') {
+  const el = document.getElementById('saveStatus');
+  if (!el) return;
+  if (saveStatusTimer) {
+    clearTimeout(saveStatusTimer);
+    saveStatusTimer = null;
+  }
+  el.textContent = text;
+  el.className = `save-status${type ? ` save-status--${type}` : ''}`;
+  if (text && type === 'saved') {
+    saveStatusTimer = setTimeout(() => {
+      el.textContent = '';
+      el.className = 'save-status';
+      saveStatusTimer = null;
+    }, 2000);
+  }
+}
+
+async function saveProfile({ silent = false } = {}) {
+  if (saveInFlight) {
+    scheduleAutoSave();
+    return false;
+  }
+
+  const profile = collectProfile();
+  saveInFlight = true;
+  updateSaveStatus('保存中…', 'saving');
+  const saveBtn = document.getElementById('saveBtn');
+  if (saveBtn) saveBtn.disabled = true;
+
+  try {
+    const clonedProfiles = JSON.parse(JSON.stringify(profiles));
+    const idx = clonedProfiles.findIndex((p) => p.id === profile.id);
+    const plain = JSON.parse(JSON.stringify(profile));
+    if (idx >= 0) clonedProfiles[idx] = plain;
+    else clonedProfiles.push(plain);
+
+    settings = collectSettings();
+
+    await StorageUtil.set({
+      profiles: clonedProfiles,
+      activeProfileId: currentProfileId,
+      settings: { ...settings },
+    });
+
+    profiles = clonedProfiles;
+
+    const { profiles: reread } = await StorageUtil.getProfiles();
+    const saved = reread.find((p) => p.id === plain.id);
+    const emailMatch =
+      String(saved?.contact?.email ?? '').trim() === String(plain.contact?.email ?? '').trim();
+    const subMatch =
+      String(saved?.contact?.emailSub1 ?? '').trim() ===
+      String(plain.contact?.emailSub1 ?? '').trim();
+
+    if (!saved || !emailMatch || !subMatch) {
+      console.error('[AutoFillPro] Save verification failed', {
+        expected: plain.contact,
+        stored: saved?.contact,
+      });
+      updateSaveStatus('保存に失敗', 'error');
+      if (!silent) {
+        showToast(
+          '保存の確認でメールが一致しませんでした。別の AutoFillPro が有効になっていないか確認してください。',
+          'error'
+        );
+      }
+      return false;
+    }
+
+    clearDirty();
+    const pcSave = plain.contact || {};
+    suppressDirty = true;
+    try {
+      setValue('zip1', pcSave.zip1 ?? '');
+      setValue('zip2', pcSave.zip2 ?? '');
+      setValue('homeZip1', pcSave.homeZip1 ?? '');
+      setValue('homeZip2', pcSave.homeZip2 ?? '');
+    } finally {
+      suppressDirty = false;
+    }
+    renderProfileList();
+    document.getElementById('profileNameTitle').textContent = plain.name;
+    updateSaveStatus('保存済み', 'saved');
+    if (!silent) showToast('保存しました', 'success');
+    return true;
+  } catch (e) {
+    console.error('[AutoFillPro] Save failed', e);
+    updateSaveStatus('保存に失敗', 'error');
+    if (!silent) showToast(`保存に失敗しました: ${e.message || String(e)}`, 'error');
+    return false;
+  } finally {
+    saveInFlight = false;
+    if (saveBtn) saveBtn.disabled = false;
+  }
 }
 
 // ───────────────────────────────────────────
@@ -232,22 +356,29 @@ function renderProfileList() {
   `).join('');
 
   list.querySelectorAll('.profile-item').forEach((el) => {
-    el.addEventListener('click', () => switchProfile(el.dataset.id));
+    el.addEventListener('click', () => {
+      switchProfile(el.dataset.id);
+    });
   });
 }
 
-function switchProfile(id) {
-  if (formDirty && id !== currentProfileId) {
-    const ok = confirm(
-      '保存していない変更があります。ほかのプロフィールに切り替えると破棄されます。切り替えますか？'
-    );
-    if (!ok) return;
+async function switchProfile(id) {
+  if (id === currentProfileId) return;
+  if (formDirty) {
+    const saved = await flushAutoSave();
+    if (!saved && formDirty) {
+      const ok = confirm(
+        '保存に失敗した変更があります。ほかのプロフィールに切り替えると破棄されます。切り替えますか？'
+      );
+      if (!ok) return;
+    }
   }
   currentProfileId = id;
   renderProfileList();
   loadProfile(id);
   StorageUtil.setActiveProfile(id);
   clearDirty();
+  updateSaveStatus('');
 }
 
 // ───────────────────────────────────────────
@@ -483,8 +614,12 @@ function bindEvents() {
   }
   window.addEventListener('beforeunload', (e) => {
     if (!formDirty) return;
+    flushAutoSave();
     e.preventDefault();
     e.returnValue = '';
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && formDirty) flushAutoSave();
   });
 
   document.getElementById('schoolType')?.addEventListener('change', applyEducationDependentUi);
@@ -502,59 +637,10 @@ function bindEvents() {
     });
   });
 
-  // Save
-  document.getElementById('saveBtn').addEventListener('click', async () => {
-    const profile = collectProfile();
-    try {
-      const clonedProfiles = JSON.parse(JSON.stringify(profiles));
-      const idx = clonedProfiles.findIndex((p) => p.id === profile.id);
-      const plain = JSON.parse(JSON.stringify(profile));
-      if (idx >= 0) clonedProfiles[idx] = plain;
-      else clonedProfiles.push(plain);
-
-      settings = collectSettings();
-
-      await StorageUtil.set({
-        profiles: clonedProfiles,
-        activeProfileId: currentProfileId,
-        settings: { ...settings },
-      });
-
-      profiles = clonedProfiles;
-
-      const { profiles: reread } = await StorageUtil.getProfiles();
-      const saved = reread.find((p) => p.id === plain.id);
-      const emailMatch =
-        String(saved?.contact?.email ?? '').trim() === String(plain.contact?.email ?? '').trim();
-      const subMatch =
-        String(saved?.contact?.emailSub1 ?? '').trim() ===
-        String(plain.contact?.emailSub1 ?? '').trim();
-
-      if (!saved || !emailMatch || !subMatch) {
-        console.error('[AutoFillPro] Save verification failed', {
-          expected: plain.contact,
-          stored: saved?.contact,
-        });
-        showToast(
-          '保存の確認でメールが一致しませんでした。別の AutoFillPro が有効になっていないか確認してください。',
-          'error'
-        );
-        return;
-      }
-
-      clearDirty();
-      const pcSave = plain.contact || {};
-      setValue('zip1', pcSave.zip1 ?? '');
-      setValue('zip2', pcSave.zip2 ?? '');
-      setValue('homeZip1', pcSave.homeZip1 ?? '');
-      setValue('homeZip2', pcSave.homeZip2 ?? '');
-      renderProfileList();
-      document.getElementById('profileNameTitle').textContent = plain.name;
-      showToast('保存しました', 'success');
-    } catch (e) {
-      console.error('[AutoFillPro] Save failed', e);
-      showToast(`保存に失敗しました: ${e.message || String(e)}`, 'error');
-    }
+  // Save (immediate — cancels pending debounced auto-save)
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    cancelAutoSave();
+    saveProfile({ silent: false });
   });
 
   // Add profile
@@ -655,8 +741,14 @@ async function lookupZip(zip1Id, zip2Id, prefId, cityId, addrId) {
   setValue(zip2Id, parts.zip2);
   const result = await PostalUtil.lookup(code);
   if (result) {
-    setValue(prefId, result.prefecture);
-    setValue(cityId, result.city + result.address);
+    suppressDirty = true;
+    try {
+      setValue(prefId, result.prefecture);
+      setValue(cityId, result.city + result.address);
+    } finally {
+      suppressDirty = false;
+    }
+    markDirty();
     showToast('住所を取得しました', 'success');
   } else {
     showToast('住所が見つかりませんでした', 'error');

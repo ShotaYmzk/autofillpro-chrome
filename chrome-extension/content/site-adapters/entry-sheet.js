@@ -97,7 +97,10 @@ const EntrySheetAdapter = {
   },
 
   mapFlat(profile) {
-    const flat = FieldMatcher.flattenProfile(profile);
+    let flat = FieldMatcher.flattenProfile(profile);
+    if (typeof EducationDates !== 'undefined') {
+      flat = EducationDates.applyToFlat(flat, profile.education);
+    }
     const pref = this._prefectureToSelectValue(flat.prefecture);
     let out = { ...flat, prefecture: pref || flat.prefecture };
     if (profile.contact?.vacationSameAsCurrent) return out;
@@ -133,7 +136,6 @@ const EntrySheetAdapter = {
       zipVacation2: `${p} input[name="kyubin2"]`,
       prefectureVacation: `${p} select[name="kken"]`,
       buildingVacation: `${p} input[name="kadrs2"]`,
-      gradYear: `${p} select[name="syear"]`,
       gradMonth: `${p} select[name="smonth"]`,
       graduationStatus: `${p} select[name="shikbn"]`,
     };
@@ -234,6 +236,15 @@ const EntrySheetAdapter = {
     }
 
     return extra;
+  },
+
+  /** i-web ES: syear はサイト側で正しい卒業年（例: 2028）が既定値のため上書きしない */
+  pruneFillPlan(plan) {
+    if (!this.matches()) return plan;
+    return plan.filter((row) => {
+      const n = String(row.el?.name || row.el?.id || '');
+      return n !== 'syear';
+    });
   },
 
   fillElement(el, value) {

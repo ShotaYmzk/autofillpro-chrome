@@ -11,7 +11,7 @@
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar__brand">
-        <div class="sidebar__logo">A</div>
+        <img class="sidebar__logo" src="../icons/icon48.png" alt="AutoFillPro" width="34" height="34" />
         <div>
           <div class="sidebar__name">AutoFillPro</div>
           <div class="sidebar__sub">就活マイページ自動入力</div>
@@ -48,8 +48,11 @@
       </nav>
 
       <div class="sidebar__footer">
-        <button id="exportBtn" class="btn btn--ghost btn--sm">エクスポート</button>
-        <button id="importBtn" class="btn btn--ghost btn--sm">インポート</button>
+        <button id="showTutorialBtn" class="btn btn--ghost btn--sm btn--full">使い方ガイドを見る</button>
+        <div class="sidebar__footer-actions">
+          <button id="exportBtn" class="btn btn--ghost btn--sm">エクスポート</button>
+          <button id="importBtn" class="btn btn--ghost btn--sm">インポート</button>
+        </div>
         <input type="file" id="importFile" accept=".json" style="display:none" />
       </div>
     </aside>
@@ -59,11 +62,11 @@
       <div class="main__header">
         <div>
           <h1 id="profileNameTitle" class="main__title">プロフィール設定</h1>
-          <p class="main__subtitle">情報を入力し、「保存する」まで確定されません（自動入力は保存後の内容を読みます）</p>
+          <p class="main__subtitle">入力内容は自動で保存されます（自動入力は保存済みの内容を読みます）<span id="saveStatus" class="save-status" aria-live="polite"></span></p>
         </div>
         <div class="main__actions">
           <button id="deleteProfileBtn" class="btn btn--danger btn--sm" style="display:none">削除</button>
-          <button id="saveBtn" class="btn btn--primary">保存する</button>
+          <button id="saveBtn" class="btn btn--primary">今すぐ保存</button>
         </div>
       </div>
 
@@ -519,9 +522,9 @@
                 <div class="settings-item__label">入力済みフィールドをハイライト</div>
                 <div class="settings-item__desc">自動入力後に入力されたフィールドを緑色で強調表示します</div>
               </div>
-              <label class="toggle">
+              <label class="lg-toggle">
                 <input type="checkbox" id="highlightFilled" />
-                <span class="toggle__slider"></span>
+                <span class="track"><span class="fill"></span></span>
               </label>
             </div>
             <div class="settings-item">
@@ -529,9 +532,9 @@
                 <div class="settings-item__label">入力前にプレビューを表示</div>
                 <div class="settings-item__desc">自動入力の前に、何をどこに入れるかを確認できるモーダルを表示します</div>
               </div>
-              <label class="toggle">
+              <label class="lg-toggle">
                 <input type="checkbox" id="previewBeforeFill" />
-                <span class="toggle__slider"></span>
+                <span class="track"><span class="fill"></span></span>
               </label>
             </div>
             <div class="settings-item">
@@ -539,9 +542,9 @@
                 <div class="settings-item__label">拡張アイコンを開いたときにページへボタンを出す</div>
                 <div class="settings-item__desc">MUFG など未登録ドメインでも、ポップアップを開くと右下の「自動入力」ボタンを表示します（ページ再読込後は再度ポップアップを開いてください）</div>
               </div>
-              <label class="toggle">
+              <label class="lg-toggle">
                 <input type="checkbox" id="autoInjectOnPopupOpen" />
-                <span class="toggle__slider"></span>
+                <span class="track"><span class="fill"></span></span>
               </label>
             </div>
             <div class="settings-item">
@@ -549,9 +552,9 @@
                 <div class="settings-item__label">ページ内に「自動入力」ボタンを表示</div>
                 <div class="settings-item__desc">対応するマイページ右下に緑のフローティングボタンを出します（下の「すべてのサイト…」がオフのときは Axol・i-Web など認識したサイトのみ）</div>
               </div>
-              <label class="toggle">
+              <label class="lg-toggle">
                 <input type="checkbox" id="showFloatingButton" />
-                <span class="toggle__slider"></span>
+                <span class="track"><span class="fill"></span></span>
               </label>
             </div>
             <div class="settings-item">
@@ -559,9 +562,9 @@
                 <div class="settings-item__label">すべてのサイトでフローティングボタンを表示</div>
                 <div class="settings-item__desc">オンにすると、画像編集サイトなど関係ないページにもボタンが出ます。汎用フォームへのワンクリック入力を試すときだけオンにしてください</div>
               </div>
-              <label class="toggle">
+              <label class="lg-toggle">
                 <input type="checkbox" id="floatingButtonAllSites" />
-                <span class="toggle__slider"></span>
+                <span class="track"><span class="fill"></span></span>
               </label>
             </div>
             <div class="settings-item">
@@ -569,9 +572,9 @@
                 <div class="settings-item__label">入力後に「次へ」へ自動スクロール</div>
                 <div class="settings-item__desc">オフ（初期設定）のときはスクロールしません。長いフォームで「次へ」が画面外のときだけ、自動入力後にそのボタンへスクロールします</div>
               </div>
-              <label class="toggle">
+              <label class="lg-toggle">
                 <input type="checkbox" id="scrollToNavAfterFill" />
-                <span class="toggle__slider"></span>
+                <span class="track"><span class="fill"></span></span>
               </label>
             </div>
           </div>
@@ -632,5 +635,6 @@
   <script src="../utils/furigana.js"></script>
   <script src="../utils/postal.js"></script>
   <script src="options.js"></script>
+  <script src="../onboarding/onboarding.js"></script>
 </body>
 </html>

@@ -10,12 +10,12 @@ importScripts('../utils/allowed-urls.js');
 // ──────────────────────────────────────────────
 // Install / Update
 // ──────────────────────────────────────────────
-chrome.runtime.onInstalled.addListener((details) => {
+chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === 'install') {
+    await chrome.storage.local.set({ onboardingCompleted: false });
     chrome.runtime.openOptionsPage(() => {
       if (chrome.runtime.lastError) {
-        const url = chrome.runtime.getURL('options/options.html');
-        chrome.tabs.create({ url });
+        chrome.tabs.create({ url: chrome.runtime.getURL('options/options.html') });
       }
     });
   }

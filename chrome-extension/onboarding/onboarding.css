@@ -1,0 +1,135 @@
+/* Onboarding modal — matches options page tone */
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.onboarding-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  width: 480px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+}
+
+.ob-header {
+  padding: 20px 24px 0;
+}
+
+.ob-step-meta {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.ob-progress {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.ob-progress-bar {
+  flex: 1;
+  height: 3px;
+  border-radius: 1px;
+  background: #e2e8f0;
+}
+
+.ob-progress-bar.active {
+  background: #64748b;
+}
+
+.ob-body {
+  padding: 0 24px 20px;
+  flex: 1;
+}
+
+.ob-step-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.ob-step-desc {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.ob-feature-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+}
+
+.ob-feature-list li {
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f8f9fc;
+}
+
+.ob-feature-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.ob-feature-sub {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.ob-footer {
+  padding: 14px 24px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.ob-footer-left {
+  flex-shrink: 0;
+}
+
+.ob-footer-right {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.ob-skip-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  color: #94a3b8;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ob-skip-link:hover {
+  color: #64748b;
+}

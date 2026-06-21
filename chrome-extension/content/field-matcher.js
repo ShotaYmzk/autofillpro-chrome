@@ -429,26 +429,46 @@ const FieldMatcher = (() => {
     {
       key: 'enrollYear',
       aliases: ['enroll.*year','enter.*year','入学.*年','入学年','nyuugaku.*year',
-                'admission.*year','入学.*年度', '^sgnyear$'],
+                'admission.*year','入学.*年度'],
       type: 'select',
     },
     {
       key: 'enrollMonth',
-      aliases: ['enroll.*month','入学.*月','nyuugaku.*month','admission.*month', '^sgnmonth$'],
+      aliases: ['enroll.*month','入学.*月','nyuugaku.*month','admission.*month'],
+      type: 'select',
+    },
+    {
+      key: 'priorEnrollYear',
+      aliases: ['^sgnyear$'],
+      type: 'select',
+    },
+    {
+      key: 'priorEnrollMonth',
+      aliases: ['^sgnmonth$'],
       type: 'select',
     },
     {
       key: 'gradMonth',
       aliases: ['grad.*month','graduate.*month','卒業.*月','sotsugyou.*month',
-                'graduation.*month','卒業予定.*月', '^smonth$', '^sgsmonth$',
+                'graduation.*month','卒業予定.*月', '^smonth$',
                 '^ddl_sotsuym$'],
       type: 'select',
     },
     {
       key: 'gradYear',
       aliases: ['grad.*year','graduate.*year','卒業.*年','卒業年','sotsugyou.*year',
-                'graduation.*year','卒業.*年度','卒業予定.*年','^syear$', '^sgsyear$',
+                'graduation.*year','卒業.*年度','卒業予定.*年','^syear$',
                 '^ddl_sotsuyy$'],
+      type: 'select',
+    },
+    {
+      key: 'priorGradYear',
+      aliases: ['^sgsyear$'],
+      type: 'select',
+    },
+    {
+      key: 'priorGradMonth',
+      aliases: ['^sgsmonth$'],
       type: 'select',
     },
   ];
@@ -840,7 +860,7 @@ const FieldMatcher = (() => {
       (/博士/.test(e.schoolType || '') ? '博士' : '') ||
       (/修士/.test(e.schoolType || '') ? '修士' : '');
 
-    return {
+    const flat = {
       lastName: b.lastName || '',
       firstName: b.firstName || '',
       lastKana: b.lastKana || '',
@@ -906,6 +926,10 @@ const FieldMatcher = (() => {
       enrollMonth: e.enrollMonth || '',
       gradYear: e.gradYear || '',
       gradMonth: e.gradMonth || '',
+      priorEnrollYear: e.enrollYear || '',
+      priorEnrollMonth: e.enrollMonth || '',
+      priorGradYear: e.gradYear || '',
+      priorGradMonth: e.gradMonth || '',
       highSchoolPref: e.highSchoolPref || '',
       highSchoolName: e.highSchoolName || '',
       highSchoolSearchWord: e.highSchoolSearchWord || '',
@@ -914,7 +938,12 @@ const FieldMatcher = (() => {
       highSchoolGradYear: e.highSchoolGradYear || '',
       highSchoolGradMonth: e.highSchoolGradMonth || '',
     };
+    if (typeof EducationDates !== 'undefined') {
+      return EducationDates.applyToFlat(flat, e);
+    }
+    return flat;
   }
+
 
   /**
    * Build fill plan: array of { el, value, key }
